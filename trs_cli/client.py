@@ -9,6 +9,7 @@ from trs_cli.errors import (
     exception_handler,
     InvalidURI,
 )
+from trs_cli.models import Error  # noqa: F401
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
