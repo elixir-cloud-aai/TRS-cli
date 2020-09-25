@@ -19,3 +19,7 @@ def exception_handler(
 
 class InvalidURI(Exception):
     """Exception raised for invalid URIs."""
+
+
+class InvalidResourcedentifier(Exception):
+    """Exception raised when an invalid API response is encountered."""

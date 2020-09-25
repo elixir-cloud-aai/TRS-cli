@@ -3,11 +3,16 @@
 import logging
 import re
 import sys
+import requests
+import socket
 from typing import (Dict, Optional, Tuple)
+from urllib.parse import quote
+import urllib3
 
 from trs_cli.errors import (
     exception_handler,
     InvalidURI,
+    InvalidResourcedentifier,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,9 +53,12 @@ class TRSClient():
     """
     # set regular expressions as private class variables
     _RE_DOMAIN_PART = r'[a-z0-9]([a-z0-9-]{1,61}[a-z0-9]?)?'
-    _RE_DOMAIN = rf"({_RE_DOMAIN_PART}\.)+{_RE_DOMAIN_PART}\.?"
+    _RE_DOMAIN = rf"({_RE_DOMAIN_PART}\.?)+{_RE_DOMAIN_PART}\.?"
     _RE_TRS_ID = r'\S+'  # TODO: update to account for versioned TRS URIs
     _RE_HOST = rf"^(?P<schema>trs|http|https):\/\/(?P<host>{_RE_DOMAIN})\/?"
+    _RE_TRS_TOOL_UID = r"[a-z0-9]{6}"
+    _RE_TOOL_ID = rf"^(trs:\/\/{_RE_DOMAIN}\/)?(?P<tool_id>" \
+        rf"{_RE_TRS_TOOL_UID})(\/versions\/)?(?P<tool_version_id>.*)?"
 
     def __init__(
         self,
@@ -77,6 +85,81 @@ class TRSClient():
     # """Docstring"""
     #
     # Check DRS-cli repo for examples
+
+    def _get_tool_version(
+        self,
+        tool_id: Optional[str] = None,
+        version_id: Optional[str] = None,
+    ) -> Tuple[str, Optional[str]]:
+        """
+        Return sanitized tool and/or version identifiers or extract them from
+        a TRS URI.
+
+        Arguments:
+            tool_id: Implementation-specific TRS tool identifier OR TRS URI
+                pointing to a given tool, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+                Note that if a TRS URI is passed, only the TRS identifier parts
+                (tool and version) will be evaluated. To reset the hostname,
+                create a new client with the `TRSClient()` constructor.
+            version_id: Implementation-specific TRS version identifier; if
+                provided, will take precedence over any version identifier
+                extracted from a versioned TRS URI passed to `tool_id`
+
+            Returns:
+                Tuple of validated, percent-encoded tool and version
+                identifiers, respectively; if no `version_id` was supplied OR
+                an unversioned TRS URI was passed to `tool_id`, the second
+                item of the tuple will be set to `None`; likewise, if not
+                `tool_id` was provided, the first item of the tuple will
+                be set to `None`.
+
+            Raises:
+                drs_cli.errors.InvalidResourcedentifier: input tool identifier
+                    cannot be parsed.
+        """
+        if not tool_id and not version_id:
+            raise InvalidResourcedentifier(
+                "Tool_id and version_id not provided"
+            )
+
+        re_tool_id_regex, re_version_id = self._get_tool_and_version_id(
+            tool_id=tool_id)
+
+        if tool_id and not version_id:
+            if re_version_id:
+                version_id = re_version_id
+                url = f"{self.uri}/tools/{re_tool_id_regex}" \
+                    f"/versions/{version_id}"
+            else:
+                url = f"{self.uri}/tools/{re_tool_id_regex}"
+        elif tool_id and version_id:
+            url = f"{self.uri}/tools/{re_tool_id_regex}/versions/{version_id}"
+
+        logger.info(f"Request URL: {url}")
+
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            raise InvalidResourcedentifier(
+                "Input tool identifier cannot be parsed"
+            )
+
+        if not version_id:  # If version_id is '' i.e NA according to regex
+            version_id = None
+
+        return [re_tool_id_regex, version_id]
 
     def _get_headers(self) -> Dict:
         """Build dictionary of request headers.
@@ -125,3 +208,18 @@ class TRSClient():
             return (schema, host)
         else:
             raise InvalidURI
+
+    def _get_tool_and_version_id(
+        self,
+        tool_id: str,
+    ) -> str:
+        """
+        Arguments:
+            tool_id: Implementation-specific TRS identifier OR hostname-based
+               TRS URI pointing to a given object.
+        Returns:
+            Validated, percent-encoded tool id and version id.
+        """
+        match = re.search(self._RE_TOOL_ID, tool_id, re.I)
+        return quote(string=match.group('tool_id'), safe=''), \
+            quote(string=match.group('tool_version_id'), safe='')
