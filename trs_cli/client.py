@@ -118,9 +118,9 @@ class TRSClient():
                 drs_cli.errors.InvalidResourcedentifier: input tool identifier
                     cannot be parsed.
         """
-        if not tool_id and not version_id:
+        if not tool_id:
             raise InvalidResourcedentifier(
-                "Tool_id and version_id not provided"
+                "Tool_id not provided"
             )
 
         re_tool_id_regex, re_version_id = self._get_tool_and_version_id(
