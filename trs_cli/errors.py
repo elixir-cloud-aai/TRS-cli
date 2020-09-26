@@ -21,5 +21,5 @@ class InvalidURI(Exception):
     """Exception raised for invalid URIs."""
 
 
-class InvalidResourcedentifier(Exception):
-    """Exception raised when an invalid API response is encountered."""
+class InvalidResourceIdentifier(Exception):
+    """Exception raised for invalid tool/version identifiers."""
