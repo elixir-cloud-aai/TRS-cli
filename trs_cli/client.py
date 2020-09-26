@@ -98,7 +98,7 @@ class TRSClient():
         self,
         type: str,
         id: str,
-        version_id: str,
+        version_id: Optional[str],
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
         """Get the tool descriptor for the specified tool.
@@ -123,14 +123,19 @@ class TRSClient():
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
-                DRS instance could not be established.
+                TRS instance could not be established.
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
+        id, version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id
+        )
         url = f"{self.uri}/tools/{id}/versions/{version_id}/{type}/descriptor"
         if token:
             self.token = token
-            self._get_headers()
+
+        self._get_headers()
         try:
             response = requests.get(
                 url=url,
@@ -163,8 +168,8 @@ class TRSClient():
                     "Response could not be validated against API schema."
                 )
             logger.info(
-                f"Retrieved descriptor with tool_id: {id}, "
-                f"version: {version_id} and type: {type}"
+                f"Retrieved descriptor of type '{type}' "
+                f"for tool '{id}', version '{version_id}'."
             )
 
         return response_val
@@ -176,7 +181,7 @@ class TRSClient():
             A dictionary of request headers
         """
         headers: Dict = {
-            'Content-type': 'application/json',
+            'Accept': 'application/json',
         }
         if self.token:
             headers['Authorization'] = 'Bearer ' + self.token
@@ -219,9 +224,9 @@ class TRSClient():
 
     def _get_tool_id_version_id(
         self,
-        tool_id: Optional[str] = None,
+        tool_id: str,
         version_id: Optional[str] = None,
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[str, str]:
         """
         Return sanitized tool and/or version identifiers or extract them from
         a TRS URI.
