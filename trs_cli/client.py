@@ -96,22 +96,26 @@ class TRSClient():
 
     def get_descriptor(
         self,
-        type: str,
         id: str,
         version_id: Optional[str],
+        type: str,
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
         """Get the tool descriptor for the specified tool.
 
         Arguments:
+            id: A unique identifier of the tool, scoped to this registry OR
+                a hostname-based TRS URI. If TRS URIs include the version
+                information, passing a `version_id` is optional.
+            version_id: An optional identifier of the tool version, scoped
+                to this registry. It is optional if version info is included
+                in the TRS URI. If passed, then the existing `version_id`
+                retreived from the TRS URI is overridden.
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowable values include
                 "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
                 "PLAIN_NFL", "PLAIN_GALAXY".
-            id: A unique identifier of the tool, scoped to this registry.
-            version_id: An identifier of the tool version, scoped to this
-            registry.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
