@@ -1,17 +1,24 @@
 """Class implementing TRS client."""
 
+import json
 import logging
+import pydantic
 import re
+import requests
+import socket
 import sys
-from typing import (Dict, Optional, Tuple)
+from typing import (Dict, Optional, Tuple, Union)
+import urllib3
 from urllib.parse import quote
 
 from trs_cli.errors import (
     exception_handler,
     InvalidURI,
     InvalidResourceIdentifier,
+    InvalidResponseError,
+    InvalidContentType
 )
-from trs_cli.models import Error  # noqa: F401
+from trs_cli.models import Error, ToolFile  # noqa: F401
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
@@ -88,6 +95,96 @@ class TRSClient():
     #
     # Check DRS-cli repo for examples
 
+    def get_files(
+        self,
+        type: str,
+        id: str,
+        version_id: Optional[str] = None,
+        format: Optional[str] = None,
+        token: Optional[str] = None
+    ) -> Union[ToolFile, Error]:
+        """Get the tool files for the specified tool.
+        Arguments:
+            type: The output type of the descriptor. Plain types return
+                the bare descriptor while the "non-plain" types return a
+                descriptor wrapped with metadata. Allowable values include
+                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY".
+            id: A unique identifier of the tool, scoped to this registry.
+            version_id: An identifier of the tool version, scoped to this
+            registry.
+            format: Returns a zip file of all files when format=zip is
+            specified.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+        Returns:
+            Unmarshalled TRS response as either an instance of
+            `ToolFile` in case of a `200` response, or an instance of
+            `Error` for all other JSON reponses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        id, version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id
+        )
+        if format is not None:
+            if format not in ['json', 'zip']:
+                url = f"{self.uri}/tools/{id}/versions/{version_id}/" \
+                      f"{type}/files"
+                raise InvalidContentType
+            else:
+                if format == 'zip':
+                    self._get_headers_zip()
+                elif format == 'json':
+                    self._get_headers()
+                url = f"{self.uri}/tools/{id}/versions/{version_id}/{type}/" \
+                      f"files?format={format}"
+        else:
+            self._get_headers()
+
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = ToolFile(**response.json())
+            except pydantic.ValidationError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(
+                f"Retrieved files of type '{type}' for tool '{id}',"
+                f"version '{version_id}'."
+            )
+
+        return response_val
+
     def _get_headers(self) -> Dict:
         """Build dictionary of request headers.
 
@@ -96,6 +193,19 @@ class TRSClient():
         """
         headers: Dict = {
             'Content-type': 'application/json',
+        }
+        if self.token:
+            headers['Authorization'] = 'Bearer ' + self.token
+        return headers
+
+    def _get_headers_zip(self) -> Dict:
+        """Build dictionary of request headers.
+
+        Returns:
+            A dictionary of request headers
+        """
+        headers: Dict = {
+            'Content-type': 'application/zip',
         }
         if self.token:
             headers['Authorization'] = 'Bearer ' + self.token
@@ -165,7 +275,7 @@ class TRSClient():
                 be set to `None`.
 
             Raises:
-                drs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
+                trs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
                     `version_id` were supplied OR the tool or version
                     identifier could not be parsed.
         """
