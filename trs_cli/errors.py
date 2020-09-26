@@ -23,3 +23,7 @@ class InvalidURI(Exception):
 
 class InvalidResourceIdentifier(Exception):
     """Exception raised for invalid tool/version identifiers."""
+
+
+class InvalidResponseError(Exception):
+    """Exception raised when an invalid API response is encountered."""

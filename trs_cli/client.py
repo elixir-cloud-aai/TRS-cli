@@ -1,17 +1,23 @@
 """Class implementing TRS client."""
 
+import json
 import logging
+import pydantic
 import re
+import requests
+import socket
 import sys
-from typing import (Dict, Optional, Tuple)
+from typing import (Dict, Optional, Tuple, Union)
+import urllib3
 from urllib.parse import quote
 
 from trs_cli.errors import (
     exception_handler,
     InvalidURI,
     InvalidResourceIdentifier,
+    InvalidResponseError
 )
-from trs_cli.models import Error  # noqa: F401
+from trs_cli.models import Error, FileWrapper  # noqa: F401
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
@@ -88,6 +94,81 @@ class TRSClient():
     #
     # Check DRS-cli repo for examples
 
+    def get_descriptor(
+        self,
+        type: str,
+        id: str,
+        version_id: str,
+        token: Optional[str] = None
+    ) -> Union[FileWrapper, Error]:
+        """Get the tool descriptor for the specified tool.
+
+        Arguments:
+            type: The output type of the descriptor. Plain types return
+                the bare descriptor while the "non-plain" types return a
+                descriptor wrapped with metadata. Allowable values include
+                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY".
+            id: A unique identifier of the tool, scoped to this registry.
+            version_id: An identifier of the tool version, scoped to this
+            registry.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of
+            `FileWrapper` in case of a `200` response, or an instance of
+            `Error` for all other JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                DRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        url = f"{self.uri}/tools/{id}/versions/{version_id}/{type}/descriptor"
+        if token:
+            self.token = token
+            self._get_headers()
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = FileWrapper(**response.json())
+            except pydantic.ValidationError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(
+                f"Retrieved descriptor with tool_id: {id}, "
+                f"version: {version_id} and type: {type}"
+            )
+
+        return response_val
+
     def _get_headers(self) -> Dict:
         """Build dictionary of request headers.
 
@@ -156,18 +237,18 @@ class TRSClient():
                 provided, will take precedence over any version identifier
                 extracted from a versioned TRS URI passed to `tool_id`
 
-            Returns:
-                Tuple of validated, percent-encoded tool and version
-                identifiers, respectively; if no `version_id` was supplied OR
-                an unversioned TRS URI was passed to `tool_id`, the second
-                item of the tuple will be set to `None`; likewise, if not
-                `tool_id` was provided, the first item of the tuple will
-                be set to `None`.
+        Returns:
+            Tuple of validated, percent-encoded tool and version
+            identifiers, respectively; if no `version_id` was supplied OR
+            an unversioned TRS URI was passed to `tool_id`, the second
+            item of the tuple will be set to `None`; likewise, if not
+            `tool_id` was provided, the first item of the tuple will
+            be set to `None`.
 
-            Raises:
-                drs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
-                    `version_id` were supplied OR the tool or version
-                    identifier could not be parsed.
+        Raises:
+            drs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
+                `version_id` were supplied OR the tool or version
+                identifier could not be parsed.
         """
         ret_tool_id: Optional[str] = None
         ret_version_id: Optional[str] = None
