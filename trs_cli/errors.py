@@ -19,3 +19,7 @@ def exception_handler(
 
 class InvalidURI(Exception):
     """Exception raised for invalid URIs."""
+
+
+class InvalidResourceIdentifier(Exception):
+    """Exception raised for invalid tool/version identifiers."""
