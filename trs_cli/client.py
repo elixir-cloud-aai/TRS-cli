@@ -11,6 +11,7 @@ from trs_cli.errors import (
     InvalidURI,
     InvalidResourceIdentifier,
 )
+from trs_cli.models import Error  # noqa: F401
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
