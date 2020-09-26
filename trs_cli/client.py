@@ -110,9 +110,13 @@ class TRSClient():
                 descriptor wrapped with metadata. Allowable values include
                 "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
                 "PLAIN_NFL", "PLAIN_GALAXY".
-            id: A unique identifier of the tool, scoped to this registry.
-            version_id: An identifier of the tool version, scoped to this
-            registry.
+            id: A unique identifier of the tool, scoped to this registry OR
+                a hostname-based TRS URI. If TRS URIs include the version
+                information, passing a `version_id` is optional.
+            version_id: An optional identifier of the tool version, scoped
+                to this registry. It is optional if version info is included
+                in the TRS URI. If passed, then the existing `version_id`
+                retreived from the TRS URI is overridden.
             format: Returns a zip file of all files when format=zip is
             specified.
             token: Bearer token for authentication. Set if required by TRS
@@ -135,7 +139,7 @@ class TRSClient():
         if format is not None:
             if format not in ['json', 'zip']:
                 url = f"{self.uri}/tools/{id}/versions/{version_id}/" \
-                      f"{type}/files"
+                    f"{type}/files"
                 raise InvalidContentType
             else:
                 if format == 'zip':
