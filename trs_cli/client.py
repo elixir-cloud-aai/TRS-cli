@@ -189,6 +189,110 @@ class TRSClient():
 
         return response_val
 
+    def get_descriptor_by_path(
+        self,
+        type: str,
+        path: str,
+        id: str,
+        version_id: Optional[str] = None,
+        accept: str = 'application/json',
+        token: Optional[str] = None
+    ) -> Union[FileWrapper, Error]:
+        """Get the tool descriptor for the specified tool.
+
+        Arguments:
+            type: The output type of the descriptor. Plain types return
+                the bare descriptor while the "non-plain" types return a
+                descriptor wrapped with metadata. Allowable values include
+                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY".
+            path: Path, including filename, of descriptor or associated file
+                relative to the primary descriptor file.
+            id: A unique identifier of the tool, scoped to this registry OR
+                a TRS URI. If a TRS URI is passed and includes the version
+                identifier, passing a `version_id` is optional. For more
+                information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+            version_id: Identifier of the tool version, scoped to this
+                registry. It is optional if a TRS URI is passed and includes
+                version information. If provided nevertheless, then the
+                `version_id` retrieved from the TRS URI is overridden.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `FileWrapper` in
+            case of a `200` response, or an instance of `Error` for all other
+            JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type, set token and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        if token:
+            self.token = token
+        self._get_headers(content_accept=accept)
+
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = (
+            f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
+            f"descriptor/{path}"
+        )
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request and handle exceptions and error responses
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = FileWrapper(**response.json())
+            except pydantic.ValidationError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(
+                f"Retrieved file associated with descriptor type '{type}' "
+                f"for tool '{_id}', version '{_version_id}'."
+            )
+
+        return response_val
+
     def get_files(
         self,
         type: str,
