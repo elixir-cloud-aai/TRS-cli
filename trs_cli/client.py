@@ -2,23 +2,30 @@
 
 import json
 import logging
-import pydantic
+from pathlib import Path
 import re
-import requests
 import socket
 import sys
 from typing import (List, Optional, Tuple, Union)
 import urllib3
 from urllib.parse import quote
 
+import pydantic
+import requests
+
 from trs_cli.errors import (
     exception_handler,
     ContentTypeUnavailable,
+    FileInformationUnavailable,
     InvalidURI,
     InvalidResourceIdentifier,
     InvalidResponseError,
 )
-from trs_cli.models import (Error, FileWrapper, ToolFile)
+from trs_cli.models import (
+    Error,
+    FileWrapper,
+    ToolFile,
+)
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
@@ -96,7 +103,8 @@ class TRSClient():
         accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
-        """Get the tool descriptor for the specified tool.
+        """Retrieve the file wrapper for the primary descriptor of a specified
+        tool version and descriptor type.
 
         Arguments:
             type: The output type of the descriptor. Plain types return
@@ -162,7 +170,7 @@ class TRSClient():
             urllib3.exceptions.NewConnectionError,
         ):
             raise requests.exceptions.ConnectionError(
-                "Could not connect to API endpoint."
+                "Could not connect to API endpoint"
             )
         if not response.status_code == 200:
             try:
@@ -172,19 +180,19 @@ class TRSClient():
                 pydantic.ValidationError,
             ):
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
-            logger.warning("Received error response.")
+            logger.warning("Received error response")
         else:
             try:
                 response_val = FileWrapper(**response.json())
             except pydantic.ValidationError:
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
             logger.info(
-                f"Retrieved descriptor of type '{type}' "
-                f"for tool '{_id}', version '{_version_id}'."
+                f"Retrieved primary descriptor of type '{type}' for tool "
+                f"'{_id}', version '{_version_id}'"
             )
 
         return response_val
@@ -199,7 +207,8 @@ class TRSClient():
         accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
-        """Get the tool descriptor for the specified tool.
+        """Retrieve the file wrapper for an indicated file for the specified
+        tool version and descriptor type.
 
         Arguments:
             type: The output type of the descriptor. Plain types return
@@ -269,7 +278,7 @@ class TRSClient():
             urllib3.exceptions.NewConnectionError,
         ):
             raise requests.exceptions.ConnectionError(
-                "Could not connect to API endpoint."
+                "Could not connect to API endpoint"
             )
         if not response.status_code == 200:
             try:
@@ -279,19 +288,19 @@ class TRSClient():
                 pydantic.ValidationError,
             ):
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
-            logger.warning("Received error response.")
+            logger.warning("Received error response")
         else:
             try:
                 response_val = FileWrapper(**response.json())
             except pydantic.ValidationError:
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
             logger.info(
-                f"Retrieved file associated with descriptor type '{type}' "
-                f"for tool '{_id}', version '{_version_id}'."
+                f"Retrieved file '{path}' associated with descriptor type "
+                f"'{type}' for tool '{_id}', version '{_version_id}'"
             )
 
         return response_val
@@ -304,7 +313,9 @@ class TRSClient():
         format: Optional[str] = None,
         token: Optional[str] = None
     ) -> Union[List[ToolFile], Error]:
-        """Get the tool files for the specified tool.
+        """Retrieve file information for the specified tool version and
+        descriptor type.
+
         Arguments:
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
@@ -323,10 +334,12 @@ class TRSClient():
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
+
         Returns:
             Unmarshalled TRS response as either an instance of `ToolFile` in
             case of a `200` response, or an instance of `Error` for all other
             JSON reponses.
+
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
@@ -341,11 +354,10 @@ class TRSClient():
             query_format = "?format=zip"
             content_accept = 'application/zip'
         else:
-            logger.error(
-                "Only 'zip' is an allowed value for the format parameter. "
-                "Omit query parameter to request a JSON response instead."
+            raise ContentTypeUnavailable(
+                "Only 'zip' is allowed for parameter 'format'; omit query"
+                "parameter to request JSON instead"
             )
-            raise ContentTypeUnavailable
         if token:
             self.token = token
         self._get_headers(content_accept=content_accept)
@@ -375,7 +387,7 @@ class TRSClient():
             urllib3.exceptions.NewConnectionError,
         ):
             raise requests.exceptions.ConnectionError(
-                "Could not connect to API endpoint."
+                "Could not connect to API endpoint"
             )
         if not response.status_code == 200:
             try:
@@ -385,9 +397,9 @@ class TRSClient():
                 pydantic.ValidationError,
             ):
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
-            logger.warning("Received error response.")
+            logger.warning("Received error response")
         else:
             try:
                 response_val = [
@@ -395,14 +407,93 @@ class TRSClient():
                 ]
             except pydantic.ValidationError:
                 raise InvalidResponseError(
-                    "Response could not be validated against API schema."
+                    "Response could not be validated against API schema"
                 )
             logger.info(
                 f"Retrieved files of type '{type}' for tool '{id}',"
-                f"version '{version_id}'."
+                f"version '{version_id}'"
             )
 
         return response_val
+
+    def retrieve_files(
+        self,
+        out_dir: Union[str, Path],
+        type: str,
+        id: str,
+        version_id: Optional[str] = None,
+        is_encoded: bool = False,
+        token: Optional[str] = None,
+    ) -> None:
+        """Write tool version file contents for a given descriptor type to
+        files.
+
+        Arguments:
+            out_dir: Directory to write requested files to. Will be attempted
+                to create if it does not exist.
+            type: The output type of the descriptor. Plain types return
+                the bare descriptor while the "non-plain" types return a
+                descriptor wrapped with metadata. Allowable values include
+                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY".
+            id: A unique identifier of the tool, scoped to this registry OR
+                a hostname-based TRS URI. If TRS URIs include the version
+                information, passing a `version_id` is optional.
+            version_id: An optional identifier of the tool version, scoped
+                to this registry. It is optional if version info is included
+                in the TRS URI. If passed, then the existing `version_id`
+                retreived from the TRS URI is overridden.
+            is_encoded: Values or relative paths of files are already
+                percent/URL-encoded.
+        """
+        # if not exists, try to create output directory
+        out_dir = Path(out_dir)
+        try:
+            Path(out_dir).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise OSError("Could not create output directory")
+
+        # get file information
+        files = self.get_files(
+            type=type,
+            id=id,
+            version_id=version_id,
+            token=token,
+        )
+        if isinstance(files, Error):
+            raise FileInformationUnavailable(
+                "File information unavailable"
+            )
+
+        # get file wrappers
+        file_wrappers = {}
+        for _f in files:
+            if not hasattr(_f, 'path') or _f.path is None:
+                raise FileInformationUnavailable(
+                    f"Path information unavailable for file object: {_f}"
+                )
+            file_wrapper = self.get_descriptor_by_path(
+                type=type,
+                path=_f.path,
+                id=id,
+                version_id=version_id,
+                is_encoded=is_encoded,
+                token=token,
+            )
+            if not isinstance(file_wrapper, FileWrapper):
+                raise FileInformationUnavailable(
+                    "Content unavailable for file at path '{_f.path}'"
+                )
+            file_wrappers[_f.path] = file_wrapper.content
+
+        # write contents to files
+        for path, content in file_wrappers.items():
+            out_path = out_dir / path
+            try:
+                with open(out_path, "w") as _fp:
+                    _fp.write(content)
+            except OSError:
+                raise OSError(f"Could not write file '{str(out_path)}'")
 
     def _get_host(
         self,
@@ -475,22 +566,25 @@ class TRSClient():
         ret_version_id: Optional[str] = None
 
         if tool_id is None and version_id is None:
-            logger.error("No TRS URI, tool or version identifier supplied.")
-            raise InvalidResourceIdentifier
+            raise InvalidResourceIdentifier(
+                "No TRS URI, tool or version identifier supplied"
+            )
 
         if tool_id is not None:
             match = re.search(self._RE_TRS_URI_OR_TOOL_ID, tool_id, re.I)
             if match is None:
-                logger.error("The provided tool identifier is invalid.")
-                raise InvalidResourceIdentifier
+                raise InvalidResourceIdentifier(
+                    "The provided tool identifier is invalid"
+                )
             ret_tool_id = match.group('tool_id')
             ret_version_id = match.group('version_id')
 
         if version_id is not None:
             match = re.search(self._RE_VERSION_ID, version_id, re.I)
             if match is None:
-                logger.error("The provided version identifier is invalid.")
-                raise InvalidResourceIdentifier
+                raise InvalidResourceIdentifier(
+                    "The provided version identifier is invalid"
+                )
             ret_version_id = match.group('version_id')
 
         if ret_tool_id is not None:
@@ -535,7 +629,6 @@ class TRSClient():
                 content type.
         """
         if requested_type not in available_types:
-            logger.error(
-                "Requested content type not provided by the service."
+            raise ContentTypeUnavailable(
+                "Requested content type not provided by the service"
             )
-            raise ContentTypeUnavailable

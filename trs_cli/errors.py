@@ -21,6 +21,12 @@ class ContentTypeUnavailable(Exception):
     """Exception raised when an unavailable content type is requested."""
 
 
+class FileInformationUnavailable(Exception):
+    """Exception raised when information for a file associated with a
+    descriptor is unavailable.
+    """
+
+
 class InvalidURI(Exception):
     """Exception raised for invalid URIs."""
 
