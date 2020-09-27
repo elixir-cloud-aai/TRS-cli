@@ -97,8 +97,8 @@ class TestGetDescriptor:
         )
         with pytest.raises(requests.exceptions.ConnectionError):
             self.cli.get_descriptor(
+                type=MOCK_DESCRIPTOR,
                 id=MOCK_TRS_URI,
-                type='CWL',
                 token=MOCK_TOKEN,
             )
 
@@ -160,6 +160,97 @@ class TestGetDescriptor:
             )
 
 
+class TestGetDescriptorByPath:
+    """Test getter for secondary descriptor, test and other files associated
+    with a given descriptor type.
+    """
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
+        f"/descriptor/{MOCK_ID}"
+    )
+
+    def test_ConnectionError(self, monkeypatch):
+        """Connection error occurs."""
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli.get_descriptor_by_path(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_TRS_URI,
+                token=MOCK_TOKEN,
+                path=MOCK_ID,
+            )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
+        r = self.cli.get_descriptor_by_path(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+            path=MOCK_ID,
+        )
+        assert r.dict() == MOCK_FILE_WRAPPER
+
+    def test_success_trs_uri(self, monkeypatch, requests_mock):
+        """Returns 200 response with TRS URI."""
+        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
+        r = self.cli.get_descriptor_by_path(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_TRS_URI_VERSIONED,
+            path=MOCK_ID,
+        )
+        assert r.dict() == MOCK_FILE_WRAPPER
+
+    def test_success_InvalidResponseError(self, requests_mock):
+        """Returns 200 response but schema validation fails."""
+        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_descriptor_by_path(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+                path=MOCK_ID,
+            )
+
+    def test_no_success_valid_error_response(self, requests_mock):
+        """Returns no 200 but valid error response."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_ERROR,
+            status_code=400,
+        )
+        r = self.cli.get_descriptor_by_path(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+            path=MOCK_ID,
+        )
+        assert r.dict() == MOCK_ERROR
+
+    def test_no_success_InvalidResponseError(self, requests_mock):
+        """Returns no 200 and error schema validation fails."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_RESPONSE_INVALID,
+            status_code=400,
+        )
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_descriptor_by_path(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+                path=MOCK_ID
+            )
+
+
 class TestGetFiles:
     """Test getter for files of a given descriptor type."""
 
@@ -180,8 +271,8 @@ class TestGetFiles:
         )
         with pytest.raises(requests.exceptions.ConnectionError):
             self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
                 id=MOCK_TRS_URI,
-                type='CWL',
                 token=MOCK_TOKEN,
             )
 
