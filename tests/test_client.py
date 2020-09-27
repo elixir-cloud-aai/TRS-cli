@@ -92,6 +92,7 @@ class TestGetDescriptor:
             self.cli.get_descriptor(
                 id=MOCK_TRS_URI,
                 type='CWL',
+                token=MOCK_TOKEN,
             )
 
     def test_success(self, monkeypatch, requests_mock):

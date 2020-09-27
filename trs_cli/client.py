@@ -7,7 +7,7 @@ import re
 import requests
 import socket
 import sys
-from typing import (Dict, List, Optional, Tuple, Union)
+from typing import (List, Optional, Tuple, Union)
 import urllib3
 from urllib.parse import quote
 
@@ -18,7 +18,7 @@ from trs_cli.errors import (
     InvalidResponseError,
     ContentTypeUnavailable,
 )
-from trs_cli.models import Error, FileWrapper  # noqa: F401
+from trs_cli.models import (Error, FileWrapper)
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
