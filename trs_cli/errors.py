@@ -17,6 +17,10 @@ def exception_handler(
     logger.error(msg)
 
 
+class ContentTypeUnavailable(Exception):
+    """Exception raised when an unavailable content type is requested."""
+
+
 class InvalidURI(Exception):
     """Exception raised for invalid URIs."""
 
@@ -27,7 +31,3 @@ class InvalidResourceIdentifier(Exception):
 
 class InvalidResponseError(Exception):
     """Exception raised when an invalid API response is encountered."""
-
-
-class InvalidContentType(Exception):
-    """Exception raised when content type not defined in the specs."""
