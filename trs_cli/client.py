@@ -195,6 +195,7 @@ class TRSClient():
         path: str,
         id: str,
         version_id: Optional[str] = None,
+        is_encoded: bool = False,
         accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
@@ -217,6 +218,7 @@ class TRSClient():
                 registry. It is optional if a TRS URI is passed and includes
                 version information. If provided nevertheless, then the
                 `version_id` retrieved from the TRS URI is overridden.
+            is_encoded: Value of `path` is already percent/URL-encoded.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
@@ -248,9 +250,10 @@ class TRSClient():
         )
 
         # build request URL
+        _path = path if is_encoded else quote(path, safe='')
         url = (
             f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
-            f"descriptor/{path}"
+            f"descriptor/{_path}"
         )
         logger.info(f"Connecting to '{url}'...")
 

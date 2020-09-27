@@ -171,7 +171,7 @@ class TestGetDescriptorByPath:
     )
     endpoint = (
         f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
-        f"/descriptor/{MOCK_BASE_PATH}"
+        f"/descriptor/{MOCK_ID}"
     )
 
     def test_ConnectionError(self, monkeypatch):
@@ -185,7 +185,7 @@ class TestGetDescriptorByPath:
                 type=MOCK_DESCRIPTOR,
                 id=MOCK_TRS_URI,
                 token=MOCK_TOKEN,
-                path=MOCK_BASE_PATH,
+                path=MOCK_ID,
             )
 
     def test_success(self, monkeypatch, requests_mock):
@@ -195,7 +195,7 @@ class TestGetDescriptorByPath:
             type=MOCK_DESCRIPTOR,
             id=MOCK_ID,
             version_id=MOCK_ID,
-            path=MOCK_BASE_PATH,
+            path=MOCK_ID,
         )
         assert r.dict() == MOCK_FILE_WRAPPER
 
@@ -205,7 +205,7 @@ class TestGetDescriptorByPath:
         r = self.cli.get_descriptor_by_path(
             type=MOCK_DESCRIPTOR,
             id=MOCK_TRS_URI_VERSIONED,
-            path=MOCK_BASE_PATH,
+            path=MOCK_ID,
         )
         assert r.dict() == MOCK_FILE_WRAPPER
 
@@ -217,7 +217,7 @@ class TestGetDescriptorByPath:
                 type=MOCK_DESCRIPTOR,
                 id=MOCK_ID,
                 version_id=MOCK_ID,
-                path=MOCK_BASE_PATH,
+                path=MOCK_ID,
             )
 
     def test_no_success_valid_error_response(self, requests_mock):
@@ -231,7 +231,7 @@ class TestGetDescriptorByPath:
             type=MOCK_DESCRIPTOR,
             id=MOCK_ID,
             version_id=MOCK_ID,
-            path=MOCK_BASE_PATH,
+            path=MOCK_ID,
         )
         assert r.dict() == MOCK_ERROR
 
@@ -247,7 +247,7 @@ class TestGetDescriptorByPath:
                 type=MOCK_DESCRIPTOR,
                 id=MOCK_ID,
                 version_id=MOCK_ID,
-                path=MOCK_BASE_PATH,
+                path=MOCK_ID
             )
 
 
