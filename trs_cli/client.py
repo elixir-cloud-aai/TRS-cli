@@ -7,7 +7,7 @@ import re
 import requests
 import socket
 import sys
-from typing import (Dict, Optional, Tuple, Union)
+from typing import (Dict, List, Optional, Tuple, Union)
 import urllib3
 from urllib.parse import quote
 
@@ -15,7 +15,8 @@ from trs_cli.errors import (
     exception_handler,
     InvalidURI,
     InvalidResourceIdentifier,
-    InvalidResponseError
+    InvalidResponseError,
+    ContentTypeUnavailable,
 )
 from trs_cli.models import Error, FileWrapper  # noqa: F401
 
@@ -84,7 +85,7 @@ class TRSClient():
             port = 80 if schema == 'http' else 443
         self.uri = f"{schema}://{host}:{port}/{base_path}"
         self.token = token
-        self.headers = self._get_headers()
+        self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
 
     # TODO: implement methods to connect to various endpoints below, e.g.,:
@@ -96,26 +97,29 @@ class TRSClient():
 
     def get_descriptor(
         self,
-        id: str,
-        version_id: Optional[str],
         type: str,
+        id: str,
+        version_id: Optional[str] = None,
+        accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
         """Get the tool descriptor for the specified tool.
 
         Arguments:
-            id: A unique identifier of the tool, scoped to this registry OR
-                a hostname-based TRS URI. If TRS URIs include the version
-                information, passing a `version_id` is optional.
-            version_id: An optional identifier of the tool version, scoped
-                to this registry. It is optional if version info is included
-                in the TRS URI. If passed, then the existing `version_id`
-                retreived from the TRS URI is overridden.
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowable values include
                 "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
                 "PLAIN_NFL", "PLAIN_GALAXY".
+            id: A unique identifier of the tool, scoped to this registry OR
+                a TRS URI. If a TRS URI is passed and includes the version
+                identifier, passing a `version_id` is optional. For more
+                information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+            version_id: Identifier of the tool version, scoped to this
+                registry. It is optional if a TRS URI is passed and includes
+                version information. If provided nevertheless, then the
+                `version_id` retrieved from the TRS URI is overridden.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
@@ -131,15 +135,29 @@ class TRSClient():
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        id, version_id = self._get_tool_id_version_id(
-            tool_id=id,
-            version_id=version_id
+        # validate requested content type, set token and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
         )
-        url = f"{self.uri}/tools/{id}/versions/{version_id}/{type}/descriptor"
         if token:
             self.token = token
+        self._get_headers(content_accept=accept)
 
-        self._get_headers()
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = (
+            f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
+            "descriptor"
+        )
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request and handle exceptions and error responses
         try:
             response = requests.get(
                 url=url,
@@ -173,23 +191,10 @@ class TRSClient():
                 )
             logger.info(
                 f"Retrieved descriptor of type '{type}' "
-                f"for tool '{id}', version '{version_id}'."
+                f"for tool '{_id}', version '{_version_id}'."
             )
 
         return response_val
-
-    def _get_headers(self) -> Dict:
-        """Build dictionary of request headers.
-
-        Returns:
-            A dictionary of request headers
-        """
-        headers: Dict = {
-            'Accept': 'application/json',
-        }
-        if self.token:
-            headers['Authorization'] = 'Bearer ' + self.token
-        return headers
 
     def _get_host(
         self,
@@ -228,9 +233,9 @@ class TRSClient():
 
     def _get_tool_id_version_id(
         self,
-        tool_id: str,
+        tool_id: Optional[str] = None,
         version_id: Optional[str] = None,
-    ) -> Tuple[str, str]:
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
         Return sanitized tool and/or version identifiers or extract them from
         a TRS URI.
@@ -287,3 +292,43 @@ class TRSClient():
             ret_version_id = quote(ret_version_id, safe='')
 
         return (ret_tool_id, ret_version_id)
+
+    def _get_headers(
+        self,
+        content_accept: str = 'application/json',
+        content_type: Optional[str] = None,
+    ) -> None:
+        """Build dictionary of request headers.
+
+        Arguments:
+            content_accept: Requested MIME/content type.
+            content_type: Type of content sent with the request.
+        """
+        self.headers['Accept'] = content_accept
+        if content_type:
+            self.headers['Content-Type'] = content_type
+        if self.token:
+            self.headers['Authorization'] = f"Bearer {self.token}"
+
+    def _validate_content_type(
+        self,
+        requested_type: str,
+        available_types: List[str] = ['application/json'],
+    ) -> None:
+        """Ensure that content type is among content types provided by the
+        service.
+
+        Arguments:
+            requested_type: Requested MIME/content type.
+            available_types: Content types provided by the service for a given
+                endpoint.
+
+        Raises:
+            ContentTypeUnavailable: The service does not provide the requested
+                content type.
+        """
+        if requested_type not in available_types:
+            logger.error(
+                "Requested content type not provided by the service."
+            )
+            raise ContentTypeUnavailable
