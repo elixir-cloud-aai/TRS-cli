@@ -9,7 +9,16 @@ from typing import List, Optional, Union
 from pydantic import AnyUrl, BaseModel, Field
 
 
-class Checksum(BaseModel):
+class CustomBaseModel(BaseModel):
+    """Settings subclass."""
+
+    class Config:
+        """Configuration for `pydantic` model class."""
+        extra = 'forbid'
+        arbitrary_types_allowed = False
+
+
+class Checksum(CustomBaseModel):
     checksum: str = Field(
         ..., description='The hex-string encoded checksum for the data. '
     )
@@ -19,7 +28,7 @@ class Checksum(BaseModel):
     )
 
 
-class ChecksumRegister(BaseModel):
+class ChecksumRegister(CustomBaseModel):
     checksum: str = Field(
         ..., description='The hex-string encoded checksum for the data. '
     )
@@ -36,12 +45,12 @@ class DescriptorType(Enum):
     GALAXY = 'GALAXY'
 
 
-class Error(BaseModel):
+class Error(CustomBaseModel):
     code: int
     message: Optional[str] = 'Internal Server Error'
 
 
-class FileWrapper(BaseModel):
+class FileWrapper(CustomBaseModel):
     checksum: Optional[List[Checksum]] = Field(
         None,
         description='A production (immutable) tool version is required to have a hashcode. Not required otherwise, but might be useful to detect changes. ',
@@ -59,7 +68,7 @@ class FileWrapper(BaseModel):
     )
 
 
-class FileWrapperRegister(BaseModel):
+class FileWrapperRegister(CustomBaseModel):
     checksum: Optional[List[ChecksumRegister]] = Field(
         None,
         description='A production (immutable) tool version is required to have a hashcode. Not required otherwise, but might be useful to detect changes. ',
@@ -88,7 +97,7 @@ class OtherType(Enum):
     OTHER = 'OTHER'
 
 
-class Organization(BaseModel):
+class Organization(CustomBaseModel):
     name: str = Field(
         ...,
         description='Name of the organization responsible for the service',
@@ -101,7 +110,7 @@ class Organization(BaseModel):
     )
 
 
-class Organization1(BaseModel):
+class Organization1(CustomBaseModel):
     name: str = Field(
         ...,
         description='Name of the organization responsible for the service',
@@ -114,7 +123,7 @@ class Organization1(BaseModel):
     )
 
 
-class ServiceType(BaseModel):
+class ServiceType(CustomBaseModel):
     artifact: str = Field(
         ...,
         description='Name of the API or GA4GH specification implemented. Official GA4GH types should be assigned as part of standards approval process. Custom artifacts are supported.',
@@ -132,7 +141,7 @@ class ServiceType(BaseModel):
     )
 
 
-class ServiceTypeRegister(BaseModel):
+class ServiceTypeRegister(CustomBaseModel):
     artifact: str = Field(
         ...,
         description='Name of the API or GA4GH specification implemented. Official GA4GH types should be assigned as part of standards approval process. Custom artifacts are supported.',
@@ -150,7 +159,7 @@ class ServiceTypeRegister(BaseModel):
     )
 
 
-class ToolClass(BaseModel):
+class ToolClass(CustomBaseModel):
     description: Optional[str] = Field(
         None,
         description='A longer explanation of what this class is and what it can accomplish.',
@@ -161,7 +170,7 @@ class ToolClass(BaseModel):
     )
 
 
-class ToolClassRegister(BaseModel):
+class ToolClassRegister(CustomBaseModel):
     description: Optional[str] = Field(
         None,
         description='A longer explanation of what this class is and what it can accomplish.',
@@ -171,7 +180,7 @@ class ToolClassRegister(BaseModel):
     )
 
 
-class ToolClassRegisterId(BaseModel):
+class ToolClassRegisterId(CustomBaseModel):
     description: Optional[str] = Field(
         None,
         description='A longer explanation of what this class is and what it can accomplish.',
@@ -190,7 +199,7 @@ class FileType(Enum):
     OTHER = 'OTHER'
 
 
-class ToolFile(BaseModel):
+class ToolFile(CustomBaseModel):
     file_type: Optional[FileType] = None
     path: Optional[str] = Field(
         None,
@@ -206,7 +215,7 @@ class FileType1(Enum):
     OTHER = 'OTHER'
 
 
-class ToolFileRegister(BaseModel):
+class ToolFileRegister(CustomBaseModel):
     file_type: Optional[FileType1] = None
     path: Optional[str] = Field(
         None,
@@ -214,17 +223,17 @@ class ToolFileRegister(BaseModel):
     )
 
 
-class TypeRegister(BaseModel):
+class TypeRegister(CustomBaseModel):
     __root__: str
 
 
-class FilesRegister(BaseModel):
+class FilesRegister(CustomBaseModel):
     file_wrapper: Optional[FileWrapperRegister] = None
     tool_file: Optional[ToolFileRegister] = None
     type: Optional[TypeRegister] = None
 
 
-class ImageData(BaseModel):
+class ImageData(CustomBaseModel):
     checksum: Optional[List[Checksum]] = Field(
         None,
         description='A production (immutable) tool version is required to have a hashcode. Not required otherwise, but might be useful to detect changes.  This exposes the hashcode for specific image versions to verify that the container version pulled is actually the version that was indexed by the registry.',
@@ -250,7 +259,7 @@ class ImageData(BaseModel):
     )
 
 
-class ImageDataRegister(BaseModel):
+class ImageDataRegister(CustomBaseModel):
     checksum: Optional[List[ChecksumRegister]] = Field(
         None,
         description='A production (immutable) tool version is required to have a hashcode. Not required otherwise, but might be useful to detect changes.  This exposes the hashcode for specific image versions to verify that the container version pulled is actually the version that was indexed by the registry.',
@@ -276,7 +285,7 @@ class ImageDataRegister(BaseModel):
     )
 
 
-class Service(BaseModel):
+class Service(CustomBaseModel):
     contactUrl: Optional[AnyUrl] = Field(
         None,
         description='URL of the contact for the provider of this service, e.g. a link to a contact form (RFC 3986 format), or an email (RFC 2368 format).',
@@ -328,7 +337,7 @@ class Service(BaseModel):
     )
 
 
-class ServiceRegister(BaseModel):
+class ServiceRegister(CustomBaseModel):
     contactUrl: Optional[AnyUrl] = Field(
         None,
         description='URL of the contact for the provider of this service, e.g. a link to a contact form (RFC 3986 format), or an email (RFC 2368 format).',
@@ -380,7 +389,7 @@ class ServiceRegister(BaseModel):
     )
 
 
-class ToolVersion(BaseModel):
+class ToolVersion(CustomBaseModel):
     author: Optional[List[str]] = Field(
         None,
         description='Contact information for the author of this version of the tool in the registry. (More complex authorship information is handled by the descriptor).',
@@ -436,7 +445,7 @@ class ToolVersion(BaseModel):
     )
 
 
-class ToolVersionRegister(BaseModel):
+class ToolVersionRegister(CustomBaseModel):
     author: Optional[List[str]] = Field(
         None,
         description='Contact information for the author of this version of the tool in the registry. (More complex authorship information is handled by the descriptor).',
@@ -478,7 +487,7 @@ class ToolVersionRegister(BaseModel):
     )
 
 
-class ToolVersionRegisterId(BaseModel):
+class ToolVersionRegisterId(CustomBaseModel):
     author: Optional[List[str]] = Field(
         None,
         description='Contact information for the author of this version of the tool in the registry. (More complex authorship information is handled by the descriptor).',
@@ -525,7 +534,7 @@ class ToolVersionRegisterId(BaseModel):
     )
 
 
-class Tool(BaseModel):
+class Tool(CustomBaseModel):
     aliases: Optional[List[str]] = Field(
         None,
         description='Support for this parameter is optional for tool registries that support aliases.\nA list of strings that can be used to identify this tool which could be  straight up URLs. \nThis can be used to expose alternative ids (such as GUIDs) for a tool\nfor registries. Can be used to match tools across registries.',
@@ -562,7 +571,7 @@ class Tool(BaseModel):
     )
 
 
-class ToolRegister(BaseModel):
+class ToolRegister(CustomBaseModel):
     aliases: Optional[List[str]] = Field(
         None,
         description='Support for this parameter is optional for tool registries that support aliases. A list of strings that can be used to identify this tool which could be straight up URLs. This can be used to expose alternative ids (such as GUIDs) for a tool for registries. Can be used to match tools across registries.',
