@@ -1,11 +1,16 @@
 """Unit tests for TRS client."""
 
+from copy import deepcopy
+import pathlib  # noqa: F401
 import pytest
 import requests
+import responses
+from unittest.mock import mock_open, patch
 
 from trs_cli.client import TRSClient
 from trs_cli.errors import (
     ContentTypeUnavailable,
+    FileInformationUnavailable,
     InvalidResponseError,
     InvalidResourceIdentifier,
     InvalidURI,
@@ -24,6 +29,7 @@ MOCK_TRS_URI_VERSIONED = f"trs://{MOCK_DOMAIN}/{MOCK_ID}/versions/{MOCK_ID}"
 MOCK_TOKEN = "MyT0k3n"
 MOCK_DESCRIPTOR = "CWL"
 MOCK_RESPONSE_INVALID = {"not": "valid"}
+MOCK_DIR = "/mock/directory"
 MOCK_ERROR = {
     "code": 400,
     "message": "BadRequest",
@@ -40,7 +46,7 @@ MOCK_FILE_WRAPPER = {
 }
 MOCK_TOOL_FILE = {
     "file_type": "PRIMARY_DESCRIPTOR",
-    "path": "some/path/to/file.ext",
+    "path": MOCK_ID,
 }
 
 
@@ -333,6 +339,7 @@ class TestGetFiles:
             id=MOCK_ID,
             version_id=MOCK_ID,
         )
+        assert isinstance(r, Error)
         assert r.dict() == MOCK_ERROR
 
     def test_no_success_InvalidResponseError(self, requests_mock):
@@ -344,6 +351,175 @@ class TestGetFiles:
         )
         with pytest.raises(InvalidResponseError):
             self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+
+class TestRetrieveFiles:
+    """Test retrieving files of a given descriptor type."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint_files = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
+        "/files"
+    )
+    endpoint_rel_path = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
+        f"/descriptor/{MOCK_ID}"
+    )
+
+    def test_out_dir_cannot_be_created_OSError(self, monkeypatch):
+        """Connection error occurs."""
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: _raise(OSError)
+        )
+        with pytest.raises(OSError):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_TRS_URI,
+                token=MOCK_TOKEN,
+            )
+
+    def test_cannot_get_files_FileInformationUnavailable(
+        self,
+        monkeypatch,
+        requests_mock,
+    ):
+        """Call to `GET .../files` endpoint returns error response."""
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: None
+        )
+        requests_mock.get(
+            self.endpoint_files,
+            json=MOCK_ERROR,
+            status_code=400,
+        )
+        with pytest.raises(FileInformationUnavailable):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+    def test_path_not_set_FileInformationUnavailable(
+        self,
+        monkeypatch,
+        requests_mock,
+    ):
+        """Path attribute in returned file information object is unset."""
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: None
+        )
+        files = [deepcopy(MOCK_TOOL_FILE)]
+        del files[0]['path']
+        requests_mock.get(
+            self.endpoint_files,
+            json=files,
+        )
+        with pytest.raises(FileInformationUnavailable):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+    @responses.activate
+    def test_no_FileWrapper_respone_FileInformationUnavailable(
+        self,
+        monkeypatch,
+    ):
+        """Call to `GET .../descripor/{relative_path}` returns error response.
+        """
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: None
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_files,
+            json=[MOCK_TOOL_FILE],
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_rel_path,
+            json=MOCK_ERROR,
+            status=400,
+        )
+        with pytest.raises(FileInformationUnavailable):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+    @responses.activate
+    def test_cannot_write_to_file_OSError(
+        self,
+        monkeypatch,
+    ):
+        """Call to `GET .../descripor/{relative_path}` returns error response.
+        """
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: None
+        )
+        monkeypatch.setattr(
+            'builtins.open',
+            lambda *args, **kwargs: _raise(OSError)
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_files,
+            json=[MOCK_TOOL_FILE],
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_rel_path,
+            json=MOCK_FILE_WRAPPER,
+        )
+        with pytest.raises(OSError):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+    @responses.activate
+    def test_success(
+        self,
+        monkeypatch,
+    ):
+        """Call completes successfully."""
+        monkeypatch.setattr(
+            'pathlib.Path.mkdir',
+            lambda *args, **kwargs: None
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_files,
+            json=[MOCK_TOOL_FILE],
+        )
+        responses.add(
+            method=responses.GET,
+            url=self.endpoint_rel_path,
+            json=MOCK_FILE_WRAPPER,
+        )
+        with patch('builtins.open', mock_open()):
+            self.cli.retrieve_files(
+                out_dir=MOCK_DIR,
                 type=MOCK_DESCRIPTOR,
                 id=MOCK_ID,
                 version_id=MOCK_ID,
