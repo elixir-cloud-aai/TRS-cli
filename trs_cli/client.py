@@ -13,12 +13,12 @@ from urllib.parse import quote
 
 from trs_cli.errors import (
     exception_handler,
+    ContentTypeUnavailable,
     InvalidURI,
     InvalidResourceIdentifier,
     InvalidResponseError,
-    ContentTypeUnavailable,
 )
-from trs_cli.models import (Error, FileWrapper)
+from trs_cli.models import (Error, FileWrapper, ToolFile)
 
 logger = logging.getLogger(__name__)
 sys.excepthook = exception_handler
@@ -88,13 +88,6 @@ class TRSClient():
         self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
 
-    # TODO: implement methods to connect to various endpoints below, e.g.,:
-    #
-    # def get_tools(self) -> List:
-    # """Docstring"""
-    #
-    # Check DRS-cli repo for examples
-
     def get_descriptor(
         self,
         type: str,
@@ -125,9 +118,9 @@ class TRSClient():
                 if expired.
 
         Returns:
-            Unmarshalled TRS response as either an instance of
-            `FileWrapper` in case of a `200` response, or an instance of
-            `Error` for all other JSON reponses.
+            Unmarshalled TRS response as either an instance of `FileWrapper` in
+            case of a `200` response, or an instance of `Error` for all other
+            JSON reponses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -196,6 +189,114 @@ class TRSClient():
 
         return response_val
 
+    def get_files(
+        self,
+        type: str,
+        id: str,
+        version_id: Optional[str] = None,
+        format: Optional[str] = None,
+        token: Optional[str] = None
+    ) -> Union[List[ToolFile], Error]:
+        """Get the tool files for the specified tool.
+        Arguments:
+            type: The output type of the descriptor. Plain types return
+                the bare descriptor while the "non-plain" types return a
+                descriptor wrapped with metadata. Allowable values include
+                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY".
+            id: A unique identifier of the tool, scoped to this registry OR
+                a hostname-based TRS URI. If TRS URIs include the version
+                information, passing a `version_id` is optional.
+            version_id: An optional identifier of the tool version, scoped
+                to this registry. It is optional if version info is included
+                in the TRS URI. If passed, then the existing `version_id`
+                retreived from the TRS URI is overridden.
+            format: Returns a zip file of all files when format=zip is
+                specified.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+        Returns:
+            Unmarshalled TRS response as either an instance of `ToolFile` in
+            case of a `200` response, or an instance of `Error` for all other
+            JSON reponses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type, set token and get request headers
+        if format is None:
+            query_format = ""
+            content_accept = 'application/json'
+        elif format == 'zip':
+            query_format = "?format=zip"
+            content_accept = 'application/zip'
+        else:
+            logger.error(
+                "Only 'zip' is an allowed value for the format parameter. "
+                "Omit query parameter to request a JSON response instead."
+            )
+            raise ContentTypeUnavailable
+        if token:
+            self.token = token
+        self._get_headers(content_accept=content_accept)
+
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = (
+            f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
+            f"files{query_format}"
+        )
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request and handle exceptions and error responses
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = [
+                    ToolFile(**tool) for tool in response.json()
+                ]
+            except pydantic.ValidationError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(
+                f"Retrieved files of type '{type}' for tool '{id}',"
+                f"version '{version_id}'."
+            )
+
+        return response_val
+
     def _get_host(
         self,
         uri: str,
@@ -252,15 +353,14 @@ class TRSClient():
                 extracted from a versioned TRS URI passed to `tool_id`
 
         Returns:
-            Tuple of validated, percent-encoded tool and version
-            identifiers, respectively; if no `version_id` was supplied OR
-            an unversioned TRS URI was passed to `tool_id`, the second
-            item of the tuple will be set to `None`; likewise, if not
-            `tool_id` was provided, the first item of the tuple will
-            be set to `None`.
+            Tuple of validated, percent-encoded tool and version identifiers,
+            respectively; if no `version_id` was supplied OR an unversioned TRS
+            URI was passed to `tool_id`, the second item of the tuple will be
+            set to `None`; likewise, if not `tool_id` was provided, the first
+            item of the tuple will be set to `None`.
 
         Raises:
-            drs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
+            trs_cli.errors.InvalidResourceIdentifier: Neither `tool_id` nor
                 `version_id` were supplied OR the tool or version
                 identifier could not be parsed.
         """

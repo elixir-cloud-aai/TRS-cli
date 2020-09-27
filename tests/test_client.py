@@ -5,9 +5,12 @@ import requests
 
 from trs_cli.client import TRSClient
 from trs_cli.errors import (
-    ContentTypeUnavailable, InvalidResponseError, InvalidURI,
+    ContentTypeUnavailable,
+    InvalidResponseError,
     InvalidResourceIdentifier,
+    InvalidURI,
 )
+from trs_cli.models import Error
 
 MOCK_DOMAIN = "x.y.z"
 MOCK_HOST = f"https://{MOCK_DOMAIN}"
@@ -34,6 +37,10 @@ MOCK_FILE_WRAPPER = {
     ],
     "content": "content",
     "url": "url",
+}
+MOCK_TOOL_FILE = {
+    "file_type": "PRIMARY_DESCRIPTOR",
+    "path": "some/path/to/file.ext",
 }
 
 
@@ -71,7 +78,7 @@ class TestTRSClientConstructor:
 
 
 class TestGetDescriptor:
-    """Test getter for primary descriptor."""
+    """Test getter for primary descriptor of a given descriptor type."""
 
     cli = TRSClient(
         uri=MOCK_TRS_URI,
@@ -116,7 +123,7 @@ class TestGetDescriptor:
 
     def test_success_InvalidResponseError(self, requests_mock):
         """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json={"not": "correct"})
+        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
         with pytest.raises(InvalidResponseError):
             self.cli.get_descriptor(
                 type=MOCK_DESCRIPTOR,
@@ -147,6 +154,105 @@ class TestGetDescriptor:
         )
         with pytest.raises(InvalidResponseError):
             self.cli.get_descriptor(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+
+class TestGetFiles:
+    """Test getter for files of a given descriptor type."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
+        "/files"
+    )
+
+    def test_ConnectionError(self, monkeypatch):
+        """Connection error occurs."""
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli.get_files(
+                id=MOCK_TRS_URI,
+                type='CWL',
+                token=MOCK_TOKEN,
+            )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_FILE])
+        r = self.cli.get_files(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+        )
+        if not isinstance(r, Error):
+            assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
+            assert r[0].path == MOCK_TOOL_FILE['path']
+
+    def test_ContentTypeUnavailable(self, monkeypatch, requests_mock):
+        """Test unavailable content type."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_FILE])
+        with pytest.raises(ContentTypeUnavailable):
+            self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+                format=MOCK_ID,
+            )
+
+    def test_success_trs_uri_zip(self, monkeypatch, requests_mock):
+        """Returns 200 ZIP response with TRS URI."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_FILE])
+        r = self.cli.get_files(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_TRS_URI_VERSIONED,
+            format='zip',
+        )
+        if not isinstance(r, Error):
+            assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
+            assert r[0].path == MOCK_TOOL_FILE['path']
+
+    def test_success_InvalidResponseError(self, requests_mock):
+        """Returns 200 response but schema validation fails."""
+        requests_mock.get(self.endpoint, json=[MOCK_RESPONSE_INVALID])
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+            )
+
+    def test_no_success_valid_error_response(self, requests_mock):
+        """Returns no 200 but valid error response."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_ERROR,
+            status_code=400,
+        )
+        r = self.cli.get_files(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+        )
+        assert r.dict() == MOCK_ERROR
+
+    def test_no_success_InvalidResponseError(self, requests_mock):
+        """Returns no 200 and error schema validation fails."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_RESPONSE_INVALID,
+            status_code=400,
+        )
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_files(
                 type=MOCK_DESCRIPTOR,
                 id=MOCK_ID,
                 version_id=MOCK_ID,
