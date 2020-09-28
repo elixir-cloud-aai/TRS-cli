@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import socket
 import sys
-from typing import (List, Optional, Tuple, Union)
+from typing import (Dict, List, Optional, Tuple, Union)
 import urllib3
 from urllib.parse import quote
 
@@ -23,6 +23,7 @@ from trs_cli.errors import (
 )
 from trs_cli.models import (
     Error,
+    FileType,
     FileWrapper,
     ToolFile,
 )
@@ -424,7 +425,7 @@ class TRSClient():
         version_id: Optional[str] = None,
         is_encoded: bool = False,
         token: Optional[str] = None,
-    ) -> None:
+    ) -> Dict[str, List[str]]:
         """Write tool version file contents for a given descriptor type to
         files.
 
@@ -445,6 +446,11 @@ class TRSClient():
                 retreived from the TRS URI is overridden.
             is_encoded: Values or relative paths of files are already
                 percent/URL-encoded.
+
+        Returns:
+            Dictionary of `FileType` enumerator values (e.g., `TEST_FILE`,
+            `PRIMARY_DESCRIPTOR`) as keys and a list of paths, relative to
+            `out_dir` as values.
         """
         # if not exists, try to create output directory
         out_dir = Path(out_dir)
@@ -464,6 +470,12 @@ class TRSClient():
             raise FileInformationUnavailable(
                 "File information unavailable"
             )
+
+        # get path of primary descriptor
+        paths_by_type = {item.value: [] for item in FileType}
+        for _file in files:
+            if _file.path is not None:
+                paths_by_type[_file.file_type.value].append(_file.path)
 
         # get file wrappers
         file_wrappers = {}
@@ -494,6 +506,8 @@ class TRSClient():
                     _fp.write(content)
             except OSError:
                 raise OSError(f"Could not write file '{str(out_path)}'")
+
+        return paths_by_type
 
     def _get_host(
         self,
