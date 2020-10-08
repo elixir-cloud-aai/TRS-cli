@@ -20,12 +20,14 @@ from trs_cli.errors import (
     InvalidURI,
     InvalidResourceIdentifier,
     InvalidResponseError,
+    InvalidInputData,
 )
 from trs_cli.models import (
     Error,
     FileType,
     FileWrapper,
     ToolFile,
+    ToolClassRegister,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,6 +97,74 @@ class TRSClient():
         self.token = token
         self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
+
+    def post_tool_class(
+        self,
+        toolClass_data: Dict,
+        token: Optional[str] = None,
+    ) -> Union[str, Error]:
+        """Register TRS ToolClass.
+        Arguments:
+            toolClass_data: TRS toolClass data.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+        Returns:
+            ID of registered TRS toolClass in case of a `200` response, or an
+            instance of `Error` for all other responses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidInputData: The object data payload could not
+                be validated against the API schema.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        url = f"{self.uri}/toolClasses"
+        logger.info(f"Request URL: {url}")
+        if token:
+            self.token = token
+            self._get_headers()
+        try:
+            ToolClassRegister(**toolClass_data).dict()
+        except pydantic.ValidationError:
+            raise InvalidInputData(
+                "ToolClass data could not be validated against API schema."
+            )
+        try:
+            response = requests.post(
+                url=url,
+                json=toolClass_data,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = str(response.json())
+            except json.decoder.JSONDecodeError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(f"ToolClass registered: {response_val}")
+        return response_val
 
     def get_descriptor(
         self,
