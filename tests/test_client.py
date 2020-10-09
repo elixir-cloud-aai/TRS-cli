@@ -16,7 +16,7 @@ from trs_cli.errors import (
     InvalidURI,
     InvalidPayload,
 )
-from trs_cli.models import Error
+from trs_cli.models import (Error, Tool)
 
 MOCK_DOMAIN = "x.y.z"
 MOCK_HOST = f"https://{MOCK_DOMAIN}"
@@ -150,18 +150,6 @@ class TestPostToolClass:
         f"{cli.uri}/toolClasses"
     )
 
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.post_tool_class(
-                payload=MOCK_TOOL_CLASS_POST,
-                token=MOCK_TOKEN,
-            )
-
     def test_success(self, monkeypatch, requests_mock):
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
@@ -177,30 +165,6 @@ class TestPostToolClass:
                 payload=MOCK_RESPONSE_INVALID
             )
 
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.post(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.post_tool_class(
-            payload=MOCK_TOOL_CLASS_POST
-        )
-        assert r.dict() == MOCK_ERROR  # type: ignore
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.post(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.post_tool_class(
-                payload=MOCK_TOOL_CLASS_POST
-            )
-
 
 class TestGetTool:
     """Test getter for tool with a given id."""
@@ -211,18 +175,6 @@ class TestGetTool:
     )
     endpoint = f"{cli.uri}/tools/{MOCK_ID}"
 
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.get_tool(
-                id=MOCK_TRS_URI,
-                token=MOCK_TOKEN,
-            )
-
     def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=MOCK_TOOL)
@@ -230,46 +182,6 @@ class TestGetTool:
             id=MOCK_ID,
         )
         assert r.dict() == MOCK_TOOL
-
-    def test_success_trs_uri(self, requests_mock):
-        """Returns 200 response with TRS URI."""
-        requests_mock.get(self.endpoint, json=MOCK_TOOL)
-        r = self.cli.get_tool(
-            id=MOCK_TRS_URI,
-        )
-        assert r.dict() == MOCK_TOOL
-
-    def test_success_InvalidResponseError(self, requests_mock):
-        """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_tool(
-                id=MOCK_ID,
-            )
-
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.get_tool(
-            id=MOCK_ID,
-        )
-        assert r.dict() == MOCK_ERROR
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_tool(
-                id=MOCK_ID,
-            )
 
 
 class TestGetDescriptor:
@@ -284,19 +196,6 @@ class TestGetDescriptor:
         "/descriptor"
     )
 
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.get_descriptor(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_TRS_URI,
-                token=MOCK_TOKEN,
-            )
-
     def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
@@ -306,53 +205,6 @@ class TestGetDescriptor:
             version_id=MOCK_ID,
         )
         assert r.dict() == MOCK_FILE_WRAPPER
-
-    def test_success_trs_uri(self, requests_mock):
-        """Returns 200 response with TRS URI."""
-        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
-        r = self.cli.get_descriptor(
-            type=MOCK_DESCRIPTOR,
-            id=MOCK_TRS_URI_VERSIONED,
-        )
-        assert r.dict() == MOCK_FILE_WRAPPER
-
-    def test_success_InvalidResponseError(self, requests_mock):
-        """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_descriptor(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-            )
-
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.get_descriptor(
-            type=MOCK_DESCRIPTOR,
-            id=MOCK_ID,
-            version_id=MOCK_ID,
-        )
-        assert r.dict() == MOCK_ERROR
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_descriptor(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-            )
 
 
 class TestGetDescriptorByPath:
@@ -369,20 +221,6 @@ class TestGetDescriptorByPath:
         f"/descriptor/{MOCK_ID}"
     )
 
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.get_descriptor_by_path(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_TRS_URI,
-                token=MOCK_TOKEN,
-                path=MOCK_ID,
-            )
-
     def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
@@ -393,57 +231,6 @@ class TestGetDescriptorByPath:
             path=MOCK_ID,
         )
         assert r.dict() == MOCK_FILE_WRAPPER
-
-    def test_success_trs_uri(self, requests_mock):
-        """Returns 200 response with TRS URI."""
-        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
-        r = self.cli.get_descriptor_by_path(
-            type=MOCK_DESCRIPTOR,
-            id=MOCK_TRS_URI_VERSIONED,
-            path=MOCK_ID,
-        )
-        assert r.dict() == MOCK_FILE_WRAPPER
-
-    def test_success_InvalidResponseError(self, requests_mock):
-        """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_descriptor_by_path(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-                path=MOCK_ID,
-            )
-
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.get_descriptor_by_path(
-            type=MOCK_DESCRIPTOR,
-            id=MOCK_ID,
-            version_id=MOCK_ID,
-            path=MOCK_ID,
-        )
-        assert r.dict() == MOCK_ERROR
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_descriptor_by_path(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-                path=MOCK_ID
-            )
 
 
 class TestGetFiles:
@@ -457,19 +244,6 @@ class TestGetFiles:
         f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
         "/files"
     )
-
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.get_files(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_TRS_URI,
-                token=MOCK_TOKEN,
-            )
 
     def test_success(self, requests_mock):
         """Returns 200 response."""
@@ -506,45 +280,6 @@ class TestGetFiles:
             assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
             assert r[0].path == MOCK_TOOL_FILE['path']
 
-    def test_success_InvalidResponseError(self, requests_mock):
-        """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json=[MOCK_RESPONSE_INVALID])
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_files(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-            )
-
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.get_files(
-            type=MOCK_DESCRIPTOR,
-            id=MOCK_ID,
-            version_id=MOCK_ID,
-        )
-        assert isinstance(r, Error)
-        assert r.dict() == MOCK_ERROR
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_files(
-                type=MOCK_DESCRIPTOR,
-                id=MOCK_ID,
-                version_id=MOCK_ID,
-            )
-
 
 class TestGetToolClasses:
     """Test getter for tool classes."""
@@ -555,54 +290,11 @@ class TestGetToolClasses:
     )
     endpoint = f"{cli.uri}/toolClasses"
 
-    def test_ConnectionError(self, monkeypatch):
-        """Connection error occurs."""
-        monkeypatch.setattr(
-            'requests.get',
-            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
-        )
-        with pytest.raises(requests.exceptions.ConnectionError):
-            self.cli.get_tool_classes(
-                token=MOCK_TOKEN,
-            )
-
     def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
         r = self.cli.get_tool_classes()
         assert r == [MOCK_TOOL_CLASS]
-
-    def test_success_trs_uri(self, requests_mock):
-        """Returns 200 response with TRS URI."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
-        r = self.cli.get_tool_classes()
-        assert r == [MOCK_TOOL_CLASS]
-
-    def test_success_InvalidResponseError(self, requests_mock):
-        """Returns 200 response but schema validation fails."""
-        requests_mock.get(self.endpoint, json=[MOCK_RESPONSE_INVALID])
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_tool_classes()
-
-    def test_no_success_valid_error_response(self, requests_mock):
-        """Returns no 200 but valid error response."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_ERROR,
-            status_code=400,
-        )
-        r = self.cli.get_tool_classes()
-        assert r.dict() == MOCK_ERROR  # type: ignore
-
-    def test_no_success_InvalidResponseError(self, requests_mock):
-        """Returns no 200 and error schema validation fails."""
-        requests_mock.get(
-            self.endpoint,
-            json=MOCK_RESPONSE_INVALID,
-            status_code=400,
-        )
-        with pytest.raises(InvalidResponseError):
-            self.cli.get_tool_classes()
 
 
 class TestRetrieveFiles:
@@ -683,7 +375,7 @@ class TestRetrieveFiles:
             )
 
     @responses.activate
-    def test_no_FileWrapper_respone_FileInformationUnavailable(
+    def test_no_FileWrapper_response_FileInformationUnavailable(
         self,
         monkeypatch,
     ):
@@ -954,4 +646,95 @@ class TestValidateContentType:
             self.cli._validate_content_type(
                 requested_type='not/available',
                 available_types=available_types,
+            )
+
+
+class TestSendRequestAndValidateRespose:
+    """Test request sending and response validation."""
+
+    cli = TRSClient(uri=MOCK_TRS_URI)
+    endpoint = MOCK_API
+    payload = {}
+
+    def test_connection_error(self, monkeypatch):
+        """Test connection error."""
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli._send_request_and_validate_response(
+                url=MOCK_API,
+            )
+
+    def test_get_str_validation(self, requests_mock):
+        """Test for getter with string response."""
+        requests_mock.get(self.endpoint, json=MOCK_ID)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+        )
+        assert response == MOCK_ID
+
+    def test_get_model_validation(self, requests_mock):
+        """Test for getter with model response."""
+        requests_mock.get(self.endpoint, json=MOCK_TOOL)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+            validation_class_200=Tool,
+        )
+        assert response == MOCK_TOOL
+
+    def test_get_list_validation(self, requests_mock):
+        """Test for getter with list of models response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+            validation_class_200=(Tool, ),
+        )
+        assert response == [MOCK_TOOL]
+
+    def test_post_validation(self, requests_mock):
+        """Test for setter."""
+        requests_mock.post(self.endpoint, json=MOCK_ID)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+            method='post',
+            payload=self.payload,
+        )
+        assert response == MOCK_ID
+
+    def test_get_success_invalid(self, requests_mock):
+        """Test for 200 response that fails validation."""
+        requests_mock.get(self.endpoint, json=MOCK_TOOL)
+        with pytest.raises(InvalidResponseError):
+            self.cli._send_request_and_validate_response(
+                url=MOCK_API,
+                validation_class_200=Error,
+            )
+
+    def test_error_response(self, requests_mock):
+        """Test for valid error response."""
+        requests_mock.get(self.endpoint, json=MOCK_ERROR, status_code=400)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+        )
+        assert response == MOCK_ERROR
+
+    def test_error_response_invalid(self, requests_mock):
+        """Test for error response that fails validation."""
+        requests_mock.get(self.endpoint, json=MOCK_ERROR, status_code=400)
+        with pytest.raises(InvalidResponseError):
+            self.cli._send_request_and_validate_response(
+                url=MOCK_API,
+                validation_class_error=Tool,
+            )
+
+    def test_invalid_http_method(self, requests_mock):
+        """Test for invalid HTTP method."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
+        with pytest.raises(AttributeError):
+            self.cli._send_request_and_validate_response(
+                url=MOCK_API,
+                method='non_existing',
+                payload=self.payload,
             )
