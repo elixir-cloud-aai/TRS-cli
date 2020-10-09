@@ -26,6 +26,7 @@ from trs_cli.models import (
     FileType,
     FileWrapper,
     ToolFile,
+    Tool,
     ToolClass,
 )
 
@@ -96,6 +97,84 @@ class TRSClient():
         self.token = token
         self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
+
+    def get_tool(
+        self,
+        id: str,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> Union[Error, Tool]:
+        """Retrieve TRS tool.
+        Arguments:
+            tool_id: Implementation-specific TRS identifier hostname-based
+               TRS URI pointing to a given tool
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+        Returns:
+            Unmarshalled TRS response as either an instance of `Tool`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type, set token and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        if token:
+            self.token = token
+        self._get_headers(content_accept=accept)
+
+        # get/sanitize tool identifier
+        _id, _ = self._get_tool_id_version_id(tool_id=id)
+
+        # build request URL
+        url = f"{self.uri}/tools/{_id}"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request and handle exceptions and error responses
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = Tool(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(f"Retrieved tool: {_id}")
+        return response_val
 
     def get_descriptor(
         self,
@@ -437,10 +516,10 @@ class TRSClient():
         """Retrieve tool classes.
 
         Arguments:
+            accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
-            accept: Requested content type.
 
         Returns:
             Unmarshalled TRS response as either a list of `ToolClass` objects
