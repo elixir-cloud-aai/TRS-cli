@@ -18,9 +18,9 @@ from trs_cli.errors import (
     ContentTypeUnavailable,
     FileInformationUnavailable,
     InvalidURI,
+    InvalidPayload,
     InvalidResourceIdentifier,
     InvalidResponseError,
-    InvalidInputData,
 )
 from trs_cli.models import (
     Error,
@@ -102,13 +102,15 @@ class TRSClient():
 
     def post_tool_class(
         self,
-        toolClass_data: Dict,
+        payload: Dict,
+        accept: str = 'application/json',
         token: Optional[str] = None,
     ) -> Union[str, Error]:
-        """Register TRS ToolClass.
+        """Register a tool class.
 
         Arguments:
-            toolClass_data: TRS toolClass data.
+            payload: Tool class data.
+            accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
@@ -119,26 +121,40 @@ class TRSClient():
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
-            trs_cli.errors.InvalidInputData: The object data payload could not
+            trs_cli.errors.InvalidPayload: The object data payload could not
                 be validated against the API schema.
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
         url = f"{self.uri}/toolClasses"
-        logger.info(f"Request URL: {url}")
-        if token:
-            self.token = token
-            self._get_headers()
+        logger.info(f"Connecting to '{url}'...")
+
+        # validate payload
         try:
-            ToolClassRegister(**toolClass_data).dict()
+            ToolClassRegister(**payload).dict()
         except pydantic.ValidationError:
-            raise InvalidInputData(
-                "ToolClass data could not be validated against API schema."
+            raise InvalidPayload(
+                "The tool class data could not be validated against API "
+                "schema."
             )
+
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.post(
                 url=url,
-                json=toolClass_data,
+                json=payload,
                 headers=self.headers,
             )
         except (
@@ -161,12 +177,7 @@ class TRSClient():
                 )
             logger.warning("Received error response.")
         else:
-            try:
-                response_val = str(response.json())
-            except json.decoder.JSONDecodeError:
-                raise InvalidResponseError(
-                    "Response could not be validated against API schema."
-                )
+            response_val = str(response.json())
             logger.info(f"ToolClass registered: {response_val}")
         return response_val
 
@@ -176,7 +187,8 @@ class TRSClient():
         accept: str = 'application/json',
         token: Optional[str] = None,
     ) -> Union[Error, Tool]:
-        """Retrieve TRS tool.
+        """Retrieve tool with the specified identifier.
+
         Arguments:
             tool_id: Implementation-specific TRS identifier hostname-based
                TRS URI pointing to a given tool
@@ -184,24 +196,27 @@ class TRSClient():
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
+
         Returns:
             Unmarshalled TRS response as either an instance of `Tool`
             in case of a `200` response, or an instance of `Error` for all
             other JSON reponses.
+
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        # validate requested content type, set token and get request headers
+        # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
             available_types=['application/json', 'text/plain'],
         )
-        if token:
-            self.token = token
-        self._get_headers(content_accept=accept)
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
 
         # get/sanitize tool identifier
         _id, _ = self._get_tool_id_version_id(tool_id=id)
@@ -210,7 +225,7 @@ class TRSClient():
         url = f"{self.uri}/tools/{_id}"
         logger.info(f"Connecting to '{url}'...")
 
-        # send request and handle exceptions and error responses
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.get(
                 url=url,
@@ -290,14 +305,15 @@ class TRSClient():
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        # validate requested content type, set token and get request headers
+        # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
             available_types=['application/json', 'text/plain'],
         )
-        if token:
-            self.token = token
-        self._get_headers(content_accept=accept)
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
 
         # get/sanitize tool and version identifiers
         _id, _version_id = self._get_tool_id_version_id(
@@ -312,7 +328,7 @@ class TRSClient():
         )
         logger.info(f"Connecting to '{url}'...")
 
-        # send request and handle exceptions and error responses
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.get(
                 url=url,
@@ -401,14 +417,15 @@ class TRSClient():
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        # validate requested content type, set token and get request headers
+        # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
             available_types=['application/json', 'text/plain'],
         )
-        if token:
-            self.token = token
-        self._get_headers(content_accept=accept)
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
 
         # get/sanitize tool and version identifiers
         _id, _version_id = self._get_tool_id_version_id(
@@ -424,7 +441,7 @@ class TRSClient():
         )
         logger.info(f"Connecting to '{url}'...")
 
-        # send request and handle exceptions and error responses
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.get(
                 url=url,
@@ -507,21 +524,22 @@ class TRSClient():
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        # validate requested content type, set token and get request headers
+        # validate requested content type and get request headers
         if format is None:
             query_format = ""
-            content_accept = 'application/json'
+            accept = 'application/json'
         elif format == 'zip':
             query_format = "?format=zip"
-            content_accept = 'application/zip'
+            accept = 'application/zip'
         else:
             raise ContentTypeUnavailable(
                 "Only 'zip' is allowed for parameter 'format'; omit query"
                 "parameter to request JSON instead"
             )
-        if token:
-            self.token = token
-        self._get_headers(content_accept=content_accept)
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
 
         # get/sanitize tool and version identifiers
         _id, _version_id = self._get_tool_id_version_id(
@@ -536,7 +554,7 @@ class TRSClient():
         )
         logger.info(f"Connecting to '{url}'...")
 
-        # send request and handle exceptions and error responses
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.get(
                 url=url,
@@ -604,20 +622,21 @@ class TRSClient():
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
         """
-        # validate requested content type, set token and get request headers
+        # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
             available_types=['application/json', 'text/plain'],
         )
-        if token:
-            self.token = token
-        self._get_headers(content_accept=accept)
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
 
         # build request URL
         url = f"{self.uri}/toolClasses"
         logger.info(f"Connecting to '{url}'...")
 
-        # send request and handle exceptions and error responses
+        # send request and handle exceptions and (error) responses
         try:
             response = requests.get(
                 url=url,
@@ -855,17 +874,22 @@ class TRSClient():
         self,
         content_accept: str = 'application/json',
         content_type: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> None:
         """Build dictionary of request headers.
 
         Arguments:
             content_accept: Requested MIME/content type.
             content_type: Type of content sent with the request.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
         """
         self.headers['Accept'] = content_accept
         if content_type:
             self.headers['Content-Type'] = content_type
-        if self.token:
+        if token is not None:
+            self.token = token
             self.headers['Authorization'] = f"Bearer {self.token}"
 
     def _validate_content_type(

@@ -14,7 +14,7 @@ from trs_cli.errors import (
     InvalidResponseError,
     InvalidResourceIdentifier,
     InvalidURI,
-    InvalidInputData,
+    InvalidPayload,
 )
 from trs_cli.models import Error
 
@@ -158,7 +158,7 @@ class TestPostToolClass:
         )
         with pytest.raises(requests.exceptions.ConnectionError):
             self.cli.post_tool_class(
-                toolClass_data=MOCK_TOOL_CLASS,
+                payload=MOCK_TOOL_CLASS_POST,
                 token=MOCK_TOKEN,
             )
 
@@ -166,15 +166,15 @@ class TestPostToolClass:
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
         r = self.cli.post_tool_class(
-            toolClass_data=MOCK_TOOL_CLASS
+            payload=MOCK_TOOL_CLASS_POST
         )
         assert r == MOCK_ID
 
-    def test_success_InvalidInputData(self, requests_mock):
-        """Raises InvalidInputData when incorrect input is provided"""
-        with pytest.raises(InvalidInputData):
+    def test_success_InvalidPayload(self, requests_mock):
+        """Raises InvalidPayload when incorrect input is provided"""
+        with pytest.raises(InvalidPayload):
             self.cli.post_tool_class(
-                toolClass_data=MOCK_RESPONSE_INVALID
+                payload=MOCK_RESPONSE_INVALID
             )
 
     def test_no_success_valid_error_response(self, requests_mock):
@@ -185,9 +185,9 @@ class TestPostToolClass:
             status_code=400,
         )
         r = self.cli.post_tool_class(
-            toolClass_data=MOCK_TOOL_CLASS
+            payload=MOCK_TOOL_CLASS_POST
         )
-        assert r.dict() == MOCK_ERROR
+        assert r.dict() == MOCK_ERROR  # type: ignore
 
     def test_no_success_InvalidResponseError(self, requests_mock):
         """Returns no 200 and error schema validation fails."""
@@ -198,7 +198,7 @@ class TestPostToolClass:
         )
         with pytest.raises(InvalidResponseError):
             self.cli.post_tool_class(
-                toolClass_data=MOCK_TOOL_CLASS
+                payload=MOCK_TOOL_CLASS_POST
             )
 
 
@@ -925,7 +925,8 @@ class TestGetHeaders:
         self.cli.token = MOCK_TOKEN
         self.cli._get_headers(
             content_accept='text/plain',
-            content_type='application/json'
+            content_type='application/json',
+            token=MOCK_TOKEN,
         )
         assert self.cli.headers['Authorization'] == f"Bearer {MOCK_TOKEN}"
         assert self.cli.headers['Accept'] == 'text/plain'
