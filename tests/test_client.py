@@ -363,7 +363,7 @@ class TestGetFiles:
 
 
 class TestGetToolClasses:
-    """Test getter for primary descriptor of a given descriptor type."""
+    """Test getter for tool classes."""
 
     cli = TRSClient(
         uri=MOCK_TRS_URI,
@@ -408,7 +408,7 @@ class TestGetToolClasses:
             status_code=400,
         )
         r = self.cli.get_tool_classes()
-        assert r.dict() == MOCK_ERROR
+        assert r.dict() == MOCK_ERROR  # type: ignore
 
     def test_no_success_InvalidResponseError(self, requests_mock):
         """Returns no 200 and error schema validation fails."""

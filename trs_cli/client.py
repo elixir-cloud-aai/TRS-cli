@@ -123,6 +123,7 @@ class TRSClient():
                 registry. It is optional if a TRS URI is passed and includes
                 version information. If provided nevertheless, then the
                 `version_id` retrieved from the TRS URI is overridden.
+            accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
@@ -188,7 +189,10 @@ class TRSClient():
         else:
             try:
                 response_val = FileWrapper(**response.json())
-            except pydantic.ValidationError:
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
                 )
@@ -230,6 +234,7 @@ class TRSClient():
                 version information. If provided nevertheless, then the
                 `version_id` retrieved from the TRS URI is overridden.
             is_encoded: Value of `path` is already percent/URL-encoded.
+            accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
@@ -296,7 +301,10 @@ class TRSClient():
         else:
             try:
                 response_val = FileWrapper(**response.json())
-            except pydantic.ValidationError:
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
                 )
@@ -407,7 +415,10 @@ class TRSClient():
                 response_val = [
                     ToolFile(**tool) for tool in response.json()
                 ]
-            except pydantic.ValidationError:
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
                 )
@@ -420,19 +431,21 @@ class TRSClient():
 
     def get_tool_classes(
         self,
+        accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[List[ToolClass], Error]:
-        """Retrieve all tool types
+        """Retrieve tool classes.
 
         Arguments:
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
+            accept: Requested content type.
 
         Returns:
-            Unmarshalled TRS response as either an instance of `ToolClass` in
-            case of a `200` response, or an instance of `Error` for all other
-            JSON reponses.
+            Unmarshalled TRS response as either a list of `ToolClass` objects
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -441,6 +454,15 @@ class TRSClient():
                 validated against the API schema.
         """
         # validate requested content type, set token and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        if token:
+            self.token = token
+        self._get_headers(content_accept=accept)
+
+        # build request URL
         url = f"{self.uri}/toolClasses"
         logger.info(f"Connecting to '{url}'...")
 
@@ -474,12 +496,15 @@ class TRSClient():
                 response_val = [
                     ToolClass(**toolClass) for toolClass in response.json()
                 ]
-            except pydantic.ValidationError:
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
                 )
             logger.info(
-                "Retrieved all tool types"
+                "Retrieved tool classes"
             )
 
         return response_val
