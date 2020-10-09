@@ -14,6 +14,7 @@ from trs_cli.errors import (
     InvalidResponseError,
     InvalidResourceIdentifier,
     InvalidURI,
+    InvalidPayload,
 )
 from trs_cli.models import Error
 
@@ -99,6 +100,10 @@ MOCK_TOOL_CLASS = {
     "id": "string",
     "name": "string"
 }
+MOCK_TOOL_CLASS_POST = {
+    "description": "string",
+    "name": "string"
+}
 
 
 def _raise(exception) -> None:
@@ -109,8 +114,8 @@ def _raise(exception) -> None:
 class TestTRSClientConstructor:
     """Test TRSClient() construction."""
 
-    def test_invidiual_parts(self):
-        """Provide invidiual parts."""
+    def test_individiual_parts(self):
+        """Provide individiual parts."""
         cli = TRSClient(
             uri=MOCK_HOST,
             port=MOCK_PORT,
@@ -132,6 +137,69 @@ class TestTRSClientConstructor:
             use_http=True,
         )
         assert cli.uri == f"http://{MOCK_DOMAIN}:80/ga4gh/trs/v2"
+
+
+class TestPostToolClass:
+    """Test poster for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/toolClasses"
+    )
+
+    def test_ConnectionError(self, monkeypatch):
+        """Connection error occurs."""
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli.post_tool_class(
+                payload=MOCK_TOOL_CLASS_POST,
+                token=MOCK_TOKEN,
+            )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.post(self.endpoint, json=MOCK_ID)
+        r = self.cli.post_tool_class(
+            payload=MOCK_TOOL_CLASS_POST
+        )
+        assert r == MOCK_ID
+
+    def test_success_InvalidPayload(self, requests_mock):
+        """Raises InvalidPayload when incorrect input is provided"""
+        with pytest.raises(InvalidPayload):
+            self.cli.post_tool_class(
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+    def test_no_success_valid_error_response(self, requests_mock):
+        """Returns no 200 but valid error response."""
+        requests_mock.post(
+            self.endpoint,
+            json=MOCK_ERROR,
+            status_code=400,
+        )
+        r = self.cli.post_tool_class(
+            payload=MOCK_TOOL_CLASS_POST
+        )
+        assert r.dict() == MOCK_ERROR  # type: ignore
+
+    def test_no_success_InvalidResponseError(self, requests_mock):
+        """Returns no 200 and error schema validation fails."""
+        requests_mock.post(
+            self.endpoint,
+            json=MOCK_RESPONSE_INVALID,
+            status_code=400,
+        )
+        with pytest.raises(InvalidResponseError):
+            self.cli.post_tool_class(
+                payload=MOCK_TOOL_CLASS_POST
+            )
 
 
 class TestGetTool:
@@ -857,7 +925,8 @@ class TestGetHeaders:
         self.cli.token = MOCK_TOKEN
         self.cli._get_headers(
             content_accept='text/plain',
-            content_type='application/json'
+            content_type='application/json',
+            token=MOCK_TOKEN,
         )
         assert self.cli.headers['Authorization'] == f"Bearer {MOCK_TOKEN}"
         assert self.cli.headers['Accept'] == 'text/plain'
