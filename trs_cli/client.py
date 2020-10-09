@@ -26,6 +26,7 @@ from trs_cli.models import (
     FileType,
     FileWrapper,
     ToolFile,
+    Tool,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,68 @@ class TRSClient():
         self.token = token
         self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
+
+    def get_tool(
+        self,
+        tool_id: str,
+        token: Optional[str] = None,
+    ) -> Union[Error, Tool]:
+        """Retrieve TRS tool.
+        Arguments:
+            tool_id: Implementation-specific TRS identifier hostname-based
+               TRS URI pointing to a given tool
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+        Returns:
+            Unmarshalled TRS response as either an instance of `Tool`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        tool_id, _ = self._get_tool_id_version_id(tool_id=tool_id)
+        url = f"{self.uri}/tools/{tool_id}"
+        logger.info(f"Request URL: {url}")
+        if token:
+            self.token = token
+            self._get_headers()
+        try:
+            response = requests.get(
+                url=url,
+                headers=self.headers,
+            )
+        except (
+            requests.exceptions.ConnectionError,
+            socket.gaierror,
+            urllib3.exceptions.NewConnectionError,
+        ):
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to API endpoint."
+            )
+        if not response.status_code == 200:
+            try:
+                response_val = Error(**response.json())
+            except (
+                json.decoder.JSONDecodeError,
+                pydantic.ValidationError,
+            ):
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.warning("Received error response.")
+        else:
+            try:
+                response_val = Tool(**response.json())
+            except pydantic.ValidationError:
+                raise InvalidResponseError(
+                    "Response could not be validated against API schema."
+                )
+            logger.info(f"Retrieved tool: {tool_id}")
+        return response_val
 
     def get_descriptor(
         self,

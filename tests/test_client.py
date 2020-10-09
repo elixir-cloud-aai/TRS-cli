@@ -48,6 +48,52 @@ MOCK_TOOL_FILE = {
     "file_type": "PRIMARY_DESCRIPTOR",
     "path": MOCK_ID,
 }
+MOCK_VERSION = {
+    "author": [
+        "author"
+    ],
+    'containerfile': None,
+    'descriptor_type': None,
+    "id": "v1",
+    "images": None,
+    "included_apps": [
+        "https://bio.tools/tool/mytum.de/SNAP2/1",
+        "https://bio.tools/bioexcel_seqqc"
+    ],
+    "is_production": True,
+    "meta_version": None,
+    "name": "name",
+    "signed": True,
+    "url": "abcde.com",
+    "verified": None,
+    "verified_source": [
+        "verified_source",
+    ]
+}
+MOCK_TOOL_CLASS_WITH_ID = {
+    "description": "description",
+    "id": "234561",
+    "name": "name",
+}
+MOCK_TOOL = {
+    "aliases": [
+        "alias_1",
+        "alias_2",
+        "alias_3",
+    ],
+    "checker_url": "checker_url",
+    "description": "description",
+    "has_checker": True,
+    "id": MOCK_ID,
+    "meta_version": "1",
+    "name": "name",
+    "organization": "organization",
+    "toolclass": MOCK_TOOL_CLASS_WITH_ID,
+    "url": "abc.com",
+    "versions": [
+        MOCK_VERSION
+    ],
+}
 
 
 def _raise(exception) -> None:
@@ -81,6 +127,76 @@ class TestTRSClientConstructor:
             use_http=True,
         )
         assert cli.uri == f"http://{MOCK_DOMAIN}:80/ga4gh/trs/v2"
+
+
+class TestGetTool:
+    """Test getter for tool with a given id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools/{MOCK_ID}"
+
+    def test_ConnectionError(self, monkeypatch):
+        """Connection error occurs."""
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli.get_tool(
+                tool_id=MOCK_TRS_URI,
+                token=MOCK_TOKEN,
+            )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_TOOL)
+        r = self.cli.get_tool(
+            tool_id=MOCK_ID,
+        )
+        assert r.dict() == MOCK_TOOL
+
+    def test_success_trs_uri(self, monkeypatch, requests_mock):
+        """Returns 200 response with TRS URI."""
+        requests_mock.get(self.endpoint, json=MOCK_TOOL)
+        r = self.cli.get_tool(
+            tool_id=MOCK_TRS_URI,
+        )
+        assert r.dict() == MOCK_TOOL
+
+    def test_success_InvalidResponseError(self, requests_mock):
+        """Returns 200 response but schema validation fails."""
+        requests_mock.get(self.endpoint, json=MOCK_RESPONSE_INVALID)
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_tool(
+                tool_id=MOCK_ID,
+            )
+
+    def test_no_success_valid_error_response(self, requests_mock):
+        """Returns no 200 but valid error response."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_ERROR,
+            status_code=400,
+        )
+        r = self.cli.get_tool(
+            tool_id=MOCK_ID,
+        )
+        assert r.dict() == MOCK_ERROR
+
+    def test_no_success_InvalidResponseError(self, requests_mock):
+        """Returns no 200 and error schema validation fails."""
+        requests_mock.get(
+            self.endpoint,
+            json=MOCK_RESPONSE_INVALID,
+            status_code=400,
+        )
+        with pytest.raises(InvalidResponseError):
+            self.cli.get_tool(
+                tool_id=MOCK_ID,
+            )
 
 
 class TestGetDescriptor:
