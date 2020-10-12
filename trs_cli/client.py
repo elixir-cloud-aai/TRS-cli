@@ -162,6 +162,149 @@ class TRSClient():
         )
         return response  # type: ignore
 
+    def get_tools(
+        self,
+        accept: str = 'application/json',
+        id: Optional[str] = None,
+        alias: Optional[str] = None,
+        toolClass: Optional[str] = None,
+        descriptorType: Optional[str] = None,
+        registry: Optional[str] = None,
+        organization: Optional[str] = None,
+        name: Optional[str] = None,
+        toolname: Optional[str] = None,
+        description: Optional[str] = None,
+        author: Optional[str] = None,
+        checker: Optional[bool] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        token: Optional[str] = None,
+    ) -> Union[List[Tool], Error]:
+        """List all tools.
+        Filter parameters to subset the tools list can be specified. Filter
+        parameters are additive.
+        Args:
+            accept: Requested content type.
+            id: Return only entries with the given identifier.
+            alias: Return only entries with the given alias.
+            toolClass: Return only entries with the given subclass name.
+            descriptorType: Return only entries with the given descriptor type.
+            registry: Return only entries from the given registry.
+            organization: Return only entries from the given organization.
+            name: Return only entries with the given image name.
+            toolname: Return only entries with the given tool name.
+            description: Return only entries with the given description.
+            author: Return only entries from the given author.
+            checker: Return only checker workflows.
+            limit: Number of records when paginating results.
+            offset: Start index when paginating results.
+        Returns:
+            List of all tools consistent with all filters, if specified.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/tools"
+        is_firstvar = True
+        if id is not None:
+            url = url + f"?id={id}"
+            is_firstvar = False
+        if alias is not None:
+            if is_firstvar:
+                url = url + f"?alias={alias}"
+                is_firstvar = False
+            else:
+                url = url + f"&alias={alias}"
+        if toolClass is not None:
+            if is_firstvar:
+                url = url + f"?toolClass={toolClass}"
+                is_firstvar = False
+            else:
+                url = url + f"&toolClass={toolClass}"
+        if descriptorType:
+            if is_firstvar:
+                url = url + f"?descriptorType={descriptorType}"
+                is_firstvar = False
+            else:
+                url = url + f"&descriptorType={descriptorType}"
+        if registry is not None:
+            if is_firstvar:
+                url = url + f"?registry={registry}"
+                is_firstvar = False
+            else:
+                url = url + f"&registry={registry}"
+        if organization is not None:
+            if is_firstvar:
+                url = url + f"?organization={organization}"
+                is_firstvar = False
+            else:
+                url = url + f"&organization={organization}"
+        if name is not None:
+            if is_firstvar:
+                url = url + f"?name={name}"
+                is_firstvar = False
+            else:
+                url = url + f"&name={name}"
+        if toolname is not None:
+            if is_firstvar:
+                url = url + f"?toolname={toolname}"
+                is_firstvar = False
+            else:
+                url = url + f"&toolname={toolname}"
+        if description is not None:
+            if is_firstvar:
+                url = url + f"?description={description}"
+                is_firstvar = False
+            else:
+                url = url + f"&description={description}"
+        if author:
+            if is_firstvar:
+                url = url + f"?author={author}"
+                is_firstvar = False
+            else:
+                url = url + f"&author={author}"
+        if checker is not None:
+            if is_firstvar:
+                url = url + f"?checker={checker}"
+                is_firstvar = False
+            else:
+                url = url + f"&checker={checker}"
+        if limit is not None:
+            if is_firstvar:
+                url = url + f"?limit={limit}"
+                is_firstvar = False
+            else:
+                url = url + f"&limit={limit}"
+        if offset is not None:
+            if is_firstvar:
+                url = url + f"?offset={offset}"
+                is_firstvar = False
+            else:
+                url = url + f"&offset={offset}"
+        logger.info(f"Connecting to '{url}'...")
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_200=(Tool, ),
+        )
+        logger.info(
+            "Retrieved tools"
+        )
+        return response  # type: ignore
+
     def get_tool(
         self,
         id: str,
