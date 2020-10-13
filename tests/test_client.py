@@ -71,6 +71,24 @@ MOCK_VERSION = {
         "verified_source",
     ]
 }
+MOCK_VERSION_POST = {
+    "author": [
+        "author"
+    ],
+    'descriptor_type': None,
+    "images": None,
+    "included_apps": [
+        "https://bio.tools/tool/mytum.de/SNAP2/1",
+        "https://bio.tools/bioexcel_seqqc"
+    ],
+    "is_production": True,
+    "name": "name",
+    "signed": True,
+    "verified": None,
+    "verified_source": [
+        "verified_source",
+    ]
+}
 MOCK_TOOL_CLASS_WITH_ID = {
     "description": "description",
     "id": "234561",
@@ -162,6 +180,35 @@ class TestPostToolClass:
         """Raises InvalidPayload when incorrect input is provided"""
         with pytest.raises(InvalidPayload):
             self.cli.post_tool_class(
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+
+class TestPostToolVersion:
+    """Test poster for tool versions."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions"
+    )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.post(self.endpoint, json=MOCK_ID)
+        r = self.cli.post_tool_version(
+            id=MOCK_ID,
+            payload=MOCK_VERSION_POST
+        )
+        assert r == MOCK_ID
+
+    def test_success_InvalidPayload(self, requests_mock):
+        """Raises InvalidPayload when incorrect input is provided"""
+        with pytest.raises(InvalidPayload):
+            self.cli.post_tool_version(
+                id=MOCK_ID,
                 payload=MOCK_RESPONSE_INVALID
             )
 
