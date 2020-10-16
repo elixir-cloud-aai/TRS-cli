@@ -170,7 +170,8 @@ class TRSClient():
     ) -> str:
         """Delete a tool.
         Arguments:
-            id: Tool id to be deleted.
+            id: Implementation-specific TRS identifier hostname-based
+               TRS URI pointing to a given tool to be deleted
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
@@ -195,8 +196,13 @@ class TRSClient():
             token=token,
         )
 
+        # get/sanitize tool and version identifiers
+        _id, _ = self._get_tool_id_version_id(
+            tool_id=id,
+        )
+
         # build request URL
-        url = f"{self.uri}/tools/{id}"
+        url = f"{self.uri}/tools/{_id}"
         logger.info(f"Connecting to '{url}'...")
 
         # send request
