@@ -162,6 +162,55 @@ class TRSClient():
         )
         return response  # type: ignore
 
+    def delete_tool_class(
+        self,
+        id: str,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> str:
+        """Delete a tool class.
+
+        Arguments:
+            id: ToolClass id to be deleted.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            ID of deleted TRS toolClass in case of a `200` response, or an
+            instance of `Error` for all other responses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/toolClasses/{id}"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='delete',
+        )
+        logger.info(
+            "Deleted tool class"
+        )
+        return response  # type: ignore
+
     def get_tool(
         self,
         id: str,

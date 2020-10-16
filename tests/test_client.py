@@ -166,6 +166,26 @@ class TestPostToolClass:
             )
 
 
+class TestDeleteToolClass:
+    """Test delete for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/toolClasses/{MOCK_ID}"
+    )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_tool_class(
+            id=MOCK_ID,
+        )
+        assert r == MOCK_ID
+
+
 class TestGetTool:
     """Test getter for tool with a given id."""
 
