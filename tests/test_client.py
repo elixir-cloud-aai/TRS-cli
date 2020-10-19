@@ -186,6 +186,42 @@ class TestPostToolClass:
             )
 
 
+class TestDeleteToolClass:
+    """Test delete for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/toolClasses/{MOCK_ID}"
+    )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_tool_class(
+            id=MOCK_ID,
+        )
+        assert r == MOCK_ID
+
+
+class TestGetToolClasses:
+    """Test getter for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/toolClasses"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
+        r = self.cli.get_tool_classes()
+        assert r == [MOCK_TOOL_CLASS]
+
+
 class TestGetTools:
     """Test getter for tool with the given filters."""
 
@@ -372,22 +408,6 @@ class TestGetFiles:
         if not isinstance(r, Error):
             assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
             assert r[0].path == MOCK_TOOL_FILE['path']
-
-
-class TestGetToolClasses:
-    """Test getter for tool classes."""
-
-    cli = TRSClient(
-        uri=MOCK_TRS_URI,
-        token=MOCK_TOKEN,
-    )
-    endpoint = f"{cli.uri}/toolClasses"
-
-    def test_success(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
-        r = self.cli.get_tool_classes()
-        assert r == [MOCK_TOOL_CLASS]
 
 
 class TestRetrieveFiles:
