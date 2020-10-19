@@ -2,6 +2,8 @@
 
 from copy import deepcopy
 import pathlib  # noqa: F401
+
+from pydantic import ValidationError
 import pytest
 import requests
 import responses
@@ -14,9 +16,13 @@ from trs_cli.errors import (
     InvalidResponseError,
     InvalidResourceIdentifier,
     InvalidURI,
-    InvalidPayload,
 )
-from trs_cli.models import (Error, Tool)
+from trs_cli.models import (
+    Error,
+    Tool,
+    DescriptorType,
+    ImageType,
+    )
 
 MOCK_DOMAIN = "x.y.z"
 MOCK_HOST = f"https://{MOCK_DOMAIN}"
@@ -54,9 +60,24 @@ MOCK_VERSION = {
         "author"
     ],
     'containerfile': None,
-    'descriptor_type': None,
+    'descriptor_type': [DescriptorType.CWL],
     "id": "v1",
-    "images": None,
+    "images": [
+          {
+            "checksum": [
+              {
+                "checksum": "77af4d6b9913e693e8d0b4b294fa62ade \
+                    6054e6b2f1ffb617ac955dd63fb0182",
+                "type": "sha256"
+              }
+            ],
+            "image_name": "string",
+            "image_type": ImageType.Docker,
+            "registry_host": "string",
+            "size": 0,
+            "updated": "string"
+          }
+        ],
     "included_apps": [
         "https://bio.tools/tool/mytum.de/SNAP2/1",
         "https://bio.tools/bioexcel_seqqc"
@@ -111,6 +132,22 @@ MOCK_TOOL = {
     "url": "abc.com",
     "versions": [
         MOCK_VERSION
+    ]
+}
+MOCK_TOOL_POST = {
+    "aliases": [
+        "alias_1",
+        "alias_2",
+        "alias_3",
+    ],
+    "checker_url": "checker_url",
+    "description": "description",
+    "has_checker": True,
+    "name": "name",
+    "organization": "organization",
+    "toolclass": MOCK_TOOL_CLASS_WITH_ID,
+    "versions": [
+        MOCK_VERSION_POST
     ]
 }
 MOCK_TOOL_CLASS = {
@@ -168,7 +205,7 @@ class TestPostToolClass:
         f"{cli.uri}/toolClasses"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
         r = self.cli.post_tool_class(
@@ -176,12 +213,79 @@ class TestPostToolClass:
         )
         assert r == MOCK_ID
 
-    def test_success_InvalidPayload(self, requests_mock):
-        """Raises InvalidPayload when incorrect input is provided"""
-        with pytest.raises(InvalidPayload):
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
             self.cli.post_tool_class(
                 payload=MOCK_RESPONSE_INVALID
             )
+
+
+class TestDeleteToolClass:
+    """Test delete for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/toolClasses/{MOCK_ID}"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_tool_class(
+            id=MOCK_ID,
+        )
+        assert r == MOCK_ID
+
+
+class TestPostTool:
+    """Test poster for tools."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.post(self.endpoint, json=MOCK_ID)
+        r = self.cli.post_tool(
+            payload=MOCK_TOOL_POST
+        )
+        assert r == MOCK_ID
+
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
+            self.cli.post_tool(
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+
+class TestDeleteTool:
+    """Test delete for tool."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_tool(
+            id=MOCK_ID,
+        )
+        assert r == MOCK_ID
 
 
 class TestPostToolVersion:
@@ -195,22 +299,74 @@ class TestPostToolVersion:
         f"{cli.uri}/tools/{MOCK_ID}/versions"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
-        r = self.cli.post_tool_version(
+        r = self.cli.post_version(
             id=MOCK_ID,
             payload=MOCK_VERSION_POST
         )
         assert r == MOCK_ID
 
-    def test_success_InvalidPayload(self, requests_mock):
-        """Raises InvalidPayload when incorrect input is provided"""
-        with pytest.raises(InvalidPayload):
-            self.cli.post_tool_version(
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
+            self.cli.post_version(
                 id=MOCK_ID,
                 payload=MOCK_RESPONSE_INVALID
             )
+
+
+class TestGetToolClasses:
+    """Test getter for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/toolClasses"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
+        r = self.cli.get_tool_classes()
+        assert r == [MOCK_TOOL_CLASS]
+
+
+class TestGetTools:
+    """Test getter for tool with the given filters."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools"
+
+    def test_success_without_filters(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
+        r = self.cli.get_tools()
+        assert r == [MOCK_TOOL]
+
+    def test_success_with_filters(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
+        r = self.cli.get_tools(
+            id=MOCK_ID,
+            alias="alias_1",
+            toolClass="name",
+            descriptorType="CWL",
+            registry="Docker",
+            organization="organization",
+            name="string",
+            toolname="name",
+            description="description",
+            author="author",
+            checker=True,
+            limit=1000,
+            offset=1
+            )
+        assert r == [MOCK_TOOL]
 
 
 class TestGetTool:
@@ -229,6 +385,43 @@ class TestGetTool:
             id=MOCK_ID,
         )
         assert r.dict() == MOCK_TOOL
+
+
+class TestGetVersions:
+    """Test getter for versions of tool with a given id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools/{MOCK_ID}/versions"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_VERSION])
+        r = self.cli.get_versions(
+            id=MOCK_ID,
+        )
+        assert r == [MOCK_VERSION]
+
+
+class TestGetVersion:
+    """Test getter for tool version with given tool_id and version_id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_VERSION)
+        r = self.cli.get_version(
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+        )
+        assert r.dict() == MOCK_VERSION
 
 
 class TestGetDescriptor:
@@ -326,22 +519,6 @@ class TestGetFiles:
         if not isinstance(r, Error):
             assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
             assert r[0].path == MOCK_TOOL_FILE['path']
-
-
-class TestGetToolClasses:
-    """Test getter for tool classes."""
-
-    cli = TRSClient(
-        uri=MOCK_TRS_URI,
-        token=MOCK_TOKEN,
-    )
-    endpoint = f"{cli.uri}/toolClasses"
-
-    def test_success(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL_CLASS])
-        r = self.cli.get_tool_classes()
-        assert r == [MOCK_TOOL_CLASS]
 
 
 class TestRetrieveFiles:
