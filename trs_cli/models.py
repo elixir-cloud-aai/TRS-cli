@@ -38,7 +38,7 @@ class ChecksumRegister(CustomBaseModel):
     )
 
 
-class DescriptorType(Enum):
+class DescriptorType(str, Enum):
     CWL = 'CWL'
     WDL = 'WDL'
     NFL = 'NFL'
@@ -86,7 +86,7 @@ class FileWrapperRegister(CustomBaseModel):
     )
 
 
-class ImageType(Enum):
+class ImageType(str, Enum):
     Docker = 'Docker'
     Singularity = 'Singularity'
     Conda = 'Conda'
