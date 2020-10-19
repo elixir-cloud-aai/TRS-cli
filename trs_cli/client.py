@@ -19,7 +19,6 @@ from trs_cli.errors import (
     ContentTypeUnavailable,
     FileInformationUnavailable,
     InvalidURI,
-    InvalidPayload,
     InvalidResourceIdentifier,
     InvalidResponseError,
 )
@@ -27,10 +26,11 @@ from trs_cli.models import (
     Error,
     FileType,
     FileWrapper,
-    ToolFile,
     Tool,
     ToolClass,
     ToolClassRegister,
+    ToolFile,
+    ToolRegister,
     ToolVersion,
 )
 
@@ -123,7 +123,7 @@ class TRSClient():
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
-            trs_cli.errors.InvalidPayload: The object data payload could not
+            pydantic.ValidationError: The object data payload could not
                 be validated against the API schema.
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
@@ -144,13 +144,7 @@ class TRSClient():
         logger.info(f"Connecting to '{url}'...")
 
         # validate payload
-        try:
-            ToolClassRegister(**payload).dict()
-        except pydantic.ValidationError:
-            raise InvalidPayload(
-                "The tool class data could not be validated against the API "
-                "schema."
-            )
+        ToolClassRegister(**payload).dict()
 
         # send request
         response = self._send_request_and_validate_response(
@@ -209,6 +203,61 @@ class TRSClient():
         )
         logger.info(
             "Deleted tool class"
+        )
+        return response  # type: ignore
+
+    def post_tool(
+        self,
+        payload: Dict,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> str:
+        """Register a tool.
+
+        Arguments:
+            payload: Tool data.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            ID of registered TRS tool in case of a `200` response, or an
+            instance of `Error` for all other responses.
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            pydantic.ValidationError: The object data payload could not
+                be validated against the API schema.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/tools"
+        logger.info(f"Connecting to '{url}'...")
+
+        # validate payload
+        ToolRegister(**payload).dict()
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='post',
+            payload=payload,
+        )
+        logger.info(
+            "Registered tool"
         )
         return response  # type: ignore
 
