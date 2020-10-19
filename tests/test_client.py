@@ -195,7 +195,7 @@ class TestGetTools:
     )
     endpoint = f"{cli.uri}/tools"
 
-    def test_success(self, requests_mock):
+    def test_success_without_filters(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=[MOCK_TOOL])
         r = self.cli.get_tools()
@@ -217,102 +217,6 @@ class TestGetTools:
             author="author",
             checker=True,
             limit=1000,
-            offset=1
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_alias(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            alias="alias_1",
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_toolClass(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            toolClass="name",
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_descriptorType(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            descriptorType="CWL"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_registry(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            registry="Docker"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_organization(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            organization="organization"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_name(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            name="string"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_toolname(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            toolname="name"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_description(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            description="description"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_author(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            author="author"
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_checker(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            checker=True
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_limit(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
-            limit=1000
-            )
-        assert r == [MOCK_TOOL]
-
-    def test_success_with_offset(self, requests_mock):
-        """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
-        r = self.cli.get_tools(
             offset=1
             )
         assert r == [MOCK_TOOL]

@@ -166,6 +166,7 @@ class TRSClient():
     def get_tools(
         self,
         accept: str = 'application/json',
+        token: Optional[str] = None,
         id: Optional[str] = None,
         alias: Optional[str] = None,
         toolClass: Optional[str] = None,
@@ -179,13 +180,17 @@ class TRSClient():
         checker: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-        token: Optional[str] = None,
     ) -> Union[List[Tool], Error]:
         """List all tools.
+
         Filter parameters to subset the tools list can be specified. Filter
         parameters are additive.
+
         Args:
             accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
             id: Return only entries with the given identifier.
             alias: Return only entries with the given alias.
             toolClass: Return only entries with the given subclass name.
@@ -199,8 +204,12 @@ class TRSClient():
             checker: Return only checker workflows.
             limit: Number of records when paginating results.
             offset: Start index when paginating results.
+
         Returns:
-            List of all tools consistent with all filters, if specified.
+            Unmarshalled TRS response as either a list of instances of `Tool`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
@@ -218,84 +227,32 @@ class TRSClient():
         )
 
         # build request URL
-        url = f"{self.uri}/tools"
-        is_firstvar = True
-        if id is not None:
-            url = url + f"?id={id}"
-            is_firstvar = False
-        if alias is not None:
-            if is_firstvar:
-                url = url + f"?alias={alias}"
-                is_firstvar = False
-            else:
-                url = url + f"&alias={alias}"
-        if toolClass is not None:
-            if is_firstvar:
-                url = url + f"?toolClass={toolClass}"
-                is_firstvar = False
-            else:
-                url = url + f"&toolClass={toolClass}"
-        if descriptorType:
-            if is_firstvar:
-                url = url + f"?descriptorType={descriptorType}"
-                is_firstvar = False
-            else:
-                url = url + f"&descriptorType={descriptorType}"
-        if registry is not None:
-            if is_firstvar:
-                url = url + f"?registry={registry}"
-                is_firstvar = False
-            else:
-                url = url + f"&registry={registry}"
-        if organization is not None:
-            if is_firstvar:
-                url = url + f"?organization={organization}"
-                is_firstvar = False
-            else:
-                url = url + f"&organization={organization}"
-        if name is not None:
-            if is_firstvar:
-                url = url + f"?name={name}"
-                is_firstvar = False
-            else:
-                url = url + f"&name={name}"
-        if toolname is not None:
-            if is_firstvar:
-                url = url + f"?toolname={toolname}"
-                is_firstvar = False
-            else:
-                url = url + f"&toolname={toolname}"
-        if description is not None:
-            if is_firstvar:
-                url = url + f"?description={description}"
-                is_firstvar = False
-            else:
-                url = url + f"&description={description}"
-        if author:
-            if is_firstvar:
-                url = url + f"?author={author}"
-                is_firstvar = False
-            else:
-                url = url + f"&author={author}"
-        if checker is not None:
-            if is_firstvar:
-                url = url + f"?checker={checker}"
-                is_firstvar = False
-            else:
-                url = url + f"&checker={checker}"
-        if limit is not None:
-            if is_firstvar:
-                url = url + f"?limit={limit}"
-                is_firstvar = False
-            else:
-                url = url + f"&limit={limit}"
-        if offset is not None:
-            if is_firstvar:
-                url = url + f"?offset={offset}"
-                is_firstvar = False
-            else:
-                url = url + f"&offset={offset}"
+        query_args = (
+            'id',
+            'alias',
+            'toolClass',
+            'descriptorType',
+            'registry',
+            'organization',
+            'name',
+            'toolname',
+            'description',
+            'author',
+            'checker',
+            'limit',
+            'offset',
+        )
+        query_params = '&'.join(
+            [
+                f"{k}={quote(str(v), safe='')}"
+                for k, v in locals().items()
+                if k in query_args
+                and v is not None
+            ]
+        )
+        url = '?'.join(filter(None, [f"{self.uri}/tools", query_params]))
         logger.info(f"Connecting to '{url}'...")
+
         # send request
         response = self._send_request_and_validate_response(
             url=url,
