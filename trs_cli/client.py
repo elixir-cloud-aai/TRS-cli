@@ -163,6 +163,106 @@ class TRSClient():
         )
         return response  # type: ignore
 
+    def get_tools(
+        self,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+        id: Optional[str] = None,
+        alias: Optional[str] = None,
+        toolClass: Optional[str] = None,
+        descriptorType: Optional[str] = None,
+        registry: Optional[str] = None,
+        organization: Optional[str] = None,
+        name: Optional[str] = None,
+        toolname: Optional[str] = None,
+        description: Optional[str] = None,
+        author: Optional[str] = None,
+        checker: Optional[bool] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Union[List[Tool], Error]:
+        """List all tools.
+
+        Filter parameters to subset the tools list can be specified. Filter
+        parameters are additive.
+
+        Args:
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+            id: Return only entries with the given identifier.
+            alias: Return only entries with the given alias.
+            toolClass: Return only entries with the given subclass name.
+            descriptorType: Return only entries with the given descriptor type.
+            registry: Return only entries from the given registry.
+            organization: Return only entries from the given organization.
+            name: Return only entries with the given image name.
+            toolname: Return only entries with the given tool name.
+            description: Return only entries with the given description.
+            author: Return only entries from the given author.
+            checker: Return only checker workflows.
+            limit: Number of records when paginating results.
+            offset: Start index when paginating results.
+
+        Returns:
+            Unmarshalled TRS response as either a list of instances of `Tool`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # build request URL
+        query_args = (
+            'id',
+            'alias',
+            'toolClass',
+            'descriptorType',
+            'registry',
+            'organization',
+            'name',
+            'toolname',
+            'description',
+            'author',
+            'checker',
+            'limit',
+            'offset',
+        )
+        query_params = '&'.join(
+            [
+                f"{k}={quote(str(v), safe='')}"
+                for k, v in locals().items()
+                if k in query_args
+                and v is not None
+            ]
+        )
+        url = '?'.join(filter(None, [f"{self.uri}/tools", query_params]))
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_200=(Tool, ),
+        )
+        logger.info(
+            "Retrieved tools"
+        )
+        return response  # type: ignore
+
     def get_tool(
         self,
         id: str,

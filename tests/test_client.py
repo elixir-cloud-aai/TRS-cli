@@ -16,7 +16,12 @@ from trs_cli.errors import (
     InvalidURI,
     InvalidPayload,
 )
-from trs_cli.models import (Error, Tool)
+from trs_cli.models import (
+    Error,
+    Tool,
+    DescriptorType,
+    ImageType,
+    )
 
 MOCK_DOMAIN = "x.y.z"
 MOCK_HOST = f"https://{MOCK_DOMAIN}"
@@ -54,9 +59,24 @@ MOCK_VERSION = {
         "author"
     ],
     'containerfile': None,
-    'descriptor_type': None,
+    'descriptor_type': [DescriptorType.CWL],
     "id": "v1",
-    "images": None,
+    "images": [
+          {
+            "checksum": [
+              {
+                "checksum": "77af4d6b9913e693e8d0b4b294fa62ade \
+                    6054e6b2f1ffb617ac955dd63fb0182",
+                "type": "sha256"
+              }
+            ],
+            "image_name": "string",
+            "image_type": ImageType.Docker,
+            "registry_host": "string",
+            "size": 0,
+            "updated": "string"
+          }
+        ],
     "included_apps": [
         "https://bio.tools/tool/mytum.de/SNAP2/1",
         "https://bio.tools/bioexcel_seqqc"
@@ -164,6 +184,42 @@ class TestPostToolClass:
             self.cli.post_tool_class(
                 payload=MOCK_RESPONSE_INVALID
             )
+
+
+class TestGetTools:
+    """Test getter for tool with the given filters."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools"
+
+    def test_success_without_filters(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
+        r = self.cli.get_tools()
+        assert r == [MOCK_TOOL]
+
+    def test_success_with_filters(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_TOOL])
+        r = self.cli.get_tools(
+            id=MOCK_ID,
+            alias="alias_1",
+            toolClass="name",
+            descriptorType="CWL",
+            registry="Docker",
+            organization="organization",
+            name="string",
+            toolname="name",
+            description="description",
+            author="author",
+            checker=True,
+            limit=1000,
+            offset=1
+            )
+        assert r == [MOCK_TOOL]
 
 
 class TestGetTool:
