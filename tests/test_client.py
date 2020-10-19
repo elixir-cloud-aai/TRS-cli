@@ -184,6 +184,24 @@ class TestGetTool:
         assert r.dict() == MOCK_TOOL
 
 
+class TestGetVersions:
+    """Test getter for versions of tool with a given id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/tools/{MOCK_ID}/versions"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=[MOCK_VERSION])
+        r = self.cli.get_versions(
+            id=MOCK_ID,
+        )
+        assert r == [MOCK_VERSION]
+
+
 class TestGetDescriptor:
     """Test getter for primary descriptor of a given descriptor type."""
 

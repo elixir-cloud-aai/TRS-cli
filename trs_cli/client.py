@@ -31,6 +31,7 @@ from trs_cli.models import (
     Tool,
     ToolClass,
     ToolClassRegister,
+    ToolVersion,
 )
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,60 @@ class TRSClient():
         )
         logger.info(
             "Retrieved tool"
+        )
+        return response  # type: ignore
+
+    def get_versions(
+        self,
+        id: str,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> Union[List[ToolVersion], Error]:
+        """Returns all versions of the specified tool..
+
+        Arguments:
+            tool_id: Implementation-specific TRS identifier hostname-based
+               TRS URI pointing to a given tool
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `ToolVersion`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # get/sanitize tool identifier
+        _id, _ = self._get_tool_id_version_id(tool_id=id)
+
+        # build request URL
+        url = f"{self.uri}/tools/{_id}/versions"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_200=(ToolVersion, ),
+        )
+        logger.info(
+            "Retrieved tool versions"
         )
         return response  # type: ignore
 
