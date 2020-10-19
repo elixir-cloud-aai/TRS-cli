@@ -205,7 +205,7 @@ class TestPostToolClass:
         f"{cli.uri}/toolClasses"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
         r = self.cli.post_tool_class(
@@ -213,7 +213,7 @@ class TestPostToolClass:
         )
         assert r == MOCK_ID
 
-    def test_success_ValidationError(self, requests_mock):
+    def test_success_ValidationError(self):
         """Raises validation error when incorrect input is provided"""
         with pytest.raises(ValidationError):
             self.cli.post_tool_class(
@@ -232,7 +232,7 @@ class TestDeleteToolClass:
         f"{cli.uri}/toolClasses/{MOCK_ID}"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.delete(self.endpoint, json=MOCK_ID)
         r = self.cli.delete_tool_class(
@@ -252,7 +252,7 @@ class TestPostTool:
         f"{cli.uri}/tools"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.post(self.endpoint, json=MOCK_ID)
         r = self.cli.post_tool(
@@ -260,12 +260,32 @@ class TestPostTool:
         )
         assert r == MOCK_ID
 
-    def test_success_ValidationError(self, requests_mock):
+    def test_success_ValidationError(self):
         """Raises validation error when incorrect input is provided"""
         with pytest.raises(ValidationError):
             self.cli.post_tool(
                 payload=MOCK_RESPONSE_INVALID
             )
+
+
+class TestDeleteTool:
+    """Test delete for tool."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_tool(
+            id=MOCK_ID,
+        )
+        assert r == MOCK_ID
 
 
 class TestGetToolClasses:
