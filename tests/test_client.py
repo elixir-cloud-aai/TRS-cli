@@ -184,7 +184,7 @@ class TestGetTool:
         assert r.dict() == MOCK_TOOL
 
 
-class TestGetToolVersions:
+class TestGetVersions:
     """Test getter for versions of tool with a given id."""
 
     cli = TRSClient(
