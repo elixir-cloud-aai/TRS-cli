@@ -217,7 +217,7 @@ class TRSClient():
         )
         return response  # type: ignore
 
-    def get_tool_versions(
+    def get_versions(
         self,
         id: str,
         accept: str = 'application/json',
@@ -267,7 +267,7 @@ class TRSClient():
             validation_class_200=(ToolVersion, ),
         )
         logger.info(
-            "Retrieved tool version"
+            "Retrieved tool versions"
         )
         return response  # type: ignore
 

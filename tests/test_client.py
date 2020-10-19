@@ -196,7 +196,7 @@ class TestGetToolVersions:
     def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.get(self.endpoint, json=[MOCK_VERSION])
-        r = self.cli.get_tool_versions(
+        r = self.cli.get_versions(
             id=MOCK_ID,
         )
         assert r == [MOCK_VERSION]
