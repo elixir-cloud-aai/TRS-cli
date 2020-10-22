@@ -166,7 +166,7 @@ class TRSClient():
         token: Optional[str] = None,
     ) -> str:
         """
-        Create a tool class with a predefined unique ID. 
+        Create a tool class with a predefined unique ID.
         Overwrites any existing tool object with the same ID.
 
         Arguments:

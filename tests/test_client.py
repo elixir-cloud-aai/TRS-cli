@@ -220,6 +220,7 @@ class TestPostToolClass:
                 payload=MOCK_RESPONSE_INVALID
             )
 
+
 class TestPutToolClass:
     """Test putter for tool classes."""
 
