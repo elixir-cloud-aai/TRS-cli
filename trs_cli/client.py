@@ -369,6 +369,68 @@ class TRSClient():
         )
         return response  # type: ignore
 
+    def put_version(
+        self,
+        id: str,
+        version_id: str,
+        payload: Dict,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> str:
+        """
+        Create a tool version object with a predefined ID.
+        Overwrites any existing tool version object with the same ID.
+
+        Arguments:
+            id: A unique identifier of the tool
+            version_id: A unique identifier of the tool version
+            payload: Tool version data.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            ID of registered TRS tool version in case of a `200` response, or
+            an instance of `Error` for all other responses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            pydantic.ValidationError: The object data payload could not
+                be validated against the API schema.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/tools/{id}/versions/{version_id}"
+        logger.info(f"Connecting to '{url}'...")
+
+        # validate payload
+        ToolVersionRegister(**payload).dict()
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='put',
+            payload=payload,
+        )
+        logger.info(
+            f"Registered tool version with id {version_id} for tool {id}"
+        )
+        return response  # type: ignore
+
     def get_tool_classes(
         self,
         accept: str = 'application/json',
