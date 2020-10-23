@@ -37,7 +37,3 @@ class InvalidResourceIdentifier(Exception):
 
 class InvalidResponseError(Exception):
     """Exception raised when an invalid API response is encountered."""
-
-
-class InvalidPayload(Exception):
-    """Exception raised when an invalid payload is encountered."""
