@@ -235,6 +235,22 @@ class TestPostServiceInfo:
             )
 
 
+class TestGetServiceInfo:
+    """Test getter for service with a given id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/service-info"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_SERVICE_INFO)
+        r = self.cli.get_service_info()
+        assert r.dict()['id'] == MOCK_SERVICE_INFO['id']
+
+
 class TestPostToolClass:
     """Test poster for tool classes."""
 

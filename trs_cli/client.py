@@ -26,6 +26,7 @@ from trs_cli.models import (
     Error,
     FileType,
     FileWrapper,
+    Service,
     ServiceRegister,
     Tool,
     ToolClass,
@@ -146,6 +147,54 @@ class TRSClient():
         )
         logger.info(
             "Registered service info"
+        )
+        return response  # type: ignore
+
+    def get_service_info(
+        self,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> Union[Service, Error]:
+        """Retrieve service info.
+
+        Arguments:
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `Service`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/service-info"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_ok=Service,
+        )
+        logger.info(
+            "Retrieved service info"
         )
         return response  # type: ignore
 
