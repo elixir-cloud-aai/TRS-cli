@@ -531,6 +531,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
+            validation_class_ok=str,
         )
         logger.info(
             "Deleted tool version"
