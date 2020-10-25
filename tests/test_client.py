@@ -345,7 +345,7 @@ class TestDeleteTool:
         assert r == MOCK_ID
 
 
-class TestPostToolVersion:
+class TestPostVersion:
     """Test poster for tool versions."""
 
     cli = TRSClient(
@@ -372,6 +372,27 @@ class TestPostToolVersion:
                 id=MOCK_ID,
                 payload=MOCK_RESPONSE_INVALID
             )
+
+
+class TestDeleteVersion:
+    """Test delete for tool version."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
+    )
+
+    def test_success(self, monkeypatch, requests_mock):
+        """Returns 200 response."""
+        requests_mock.delete(self.endpoint, json=MOCK_ID)
+        r = self.cli.delete_version(
+            id=MOCK_ID,
+            version_id=MOCK_ID
+        )
+        assert r == MOCK_ID
 
 
 class TestGetToolClasses:
