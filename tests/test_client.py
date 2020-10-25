@@ -37,6 +37,20 @@ MOCK_TOKEN = "MyT0k3n"
 MOCK_DESCRIPTOR = "CWL"
 MOCK_RESPONSE_INVALID = {"not": "valid"}
 MOCK_DIR = "/mock/directory"
+MOCK_SERVICE_INFO = {
+  "id": "TEMPID1",
+  "name": "TEMP_STUB",
+  "type": {
+    "group": "TEMP_GROUP",
+    "artifact": "TEMP_ARTIFACT",
+    "version": "v1"
+  },
+  "organization": {
+    "name": "Parent organization",
+    "url": "https://parent.abc"
+  },
+  "version": "0.0.0"
+}
 MOCK_ERROR = {
     "code": 400,
     "message": "BadRequest",
@@ -192,6 +206,49 @@ class TestTRSClientConstructor:
             use_http=True,
         )
         assert cli.uri == f"http://{MOCK_DOMAIN}:80/ga4gh/trs/v2"
+
+
+class TestPostServiceInfo:
+    """Test poster for service info."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/service-info"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.post(self.endpoint)
+        r = self.cli.post_service_info(
+            payload=MOCK_SERVICE_INFO
+        )
+        assert r is None
+
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
+            self.cli.post_service_info(
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+
+class TestGetServiceInfo:
+    """Test getter for service with a given id."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = f"{cli.uri}/service-info"
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_SERVICE_INFO)
+        r = self.cli.get_service_info()
+        assert r.dict()['id'] == MOCK_SERVICE_INFO['id']
 
 
 class TestPostToolClass:
@@ -917,15 +974,25 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=MOCK_ID)
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
+            validation_class_ok=str,
         )
         assert response == MOCK_ID
+
+    def test_get_none_validation(self, requests_mock):
+        """Test for getter with `None` response."""
+        requests_mock.get(self.endpoint, json=MOCK_ID)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+            validation_class_ok=None,
+        )
+        assert response is None
 
     def test_get_model_validation(self, requests_mock):
         """Test for getter with model response."""
         requests_mock.get(self.endpoint, json=MOCK_TOOL)
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_200=Tool,
+            validation_class_ok=Tool,
         )
         assert response == MOCK_TOOL
 
@@ -934,7 +1001,7 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=[MOCK_TOOL])
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_200=(Tool, ),
+            validation_class_ok=(Tool, ),
         )
         assert response == [MOCK_TOOL]
 
@@ -945,6 +1012,7 @@ class TestSendRequestAndValidateRespose:
             url=MOCK_API,
             method='post',
             payload=self.payload,
+            validation_class_ok=str,
         )
         assert response == MOCK_ID
 
@@ -954,7 +1022,7 @@ class TestSendRequestAndValidateRespose:
         with pytest.raises(InvalidResponseError):
             self.cli._send_request_and_validate_response(
                 url=MOCK_API,
-                validation_class_200=Error,
+                validation_class_ok=Error,
             )
 
     def test_error_response(self, requests_mock):
