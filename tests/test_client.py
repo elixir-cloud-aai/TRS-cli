@@ -432,6 +432,37 @@ class TestPostVersion:
             )
 
 
+class TestPutToolVersion:
+    """Test putter for tool versions."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.put(self.endpoint, json=MOCK_ID)
+        r = self.cli.put_version(
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+            payload=MOCK_VERSION_POST
+        )
+        assert r == MOCK_ID
+
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
+            self.cli.put_version(
+                id=MOCK_ID,
+                version_id=MOCK_ID,
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+
 class TestDeleteVersion:
     """Test delete for tool version."""
 
