@@ -1454,6 +1454,81 @@ class TRSClient():
 
         return paths_by_type
 
+    def get_tests(
+        self,
+        id: str,
+        type: str,
+        version_id: Optional[str] = None,
+        accept: str = 'application/json',
+        token: Optional[str] = None
+    ) -> Union[List[FileWrapper], Error]:
+        """Retrieve the file wrappers for all tests associated with a
+        specified tool version.
+
+        Arguments:
+            id: A unique identifier of the tool, scoped to this registry OR
+                a TRS URI. If a TRS URI is passed and includes the version
+                identifier, passing a `version_id` is optional. For more
+                information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+            type: The type of the underlying descriptor. Allowable values
+                include "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL",
+                "PLAIN_WDL", "PLAIN_NFL", "PLAIN_GALAXY". For example, "CWL"
+                would return a list of ToolTests objects while "PLAIN_CWL"
+                would return a bare JSON list with the content of the tests.
+            version_id: Identifier of the tool version, scoped to this
+                registry. It is optional if a TRS URI is passed and includes
+                version information. If provided nevertheless, then the
+                `version_id` retrieved from the TRS URI is overridden.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `FileWrapper` in
+            case of a `200` response, or an instance of `Error` for all other
+            JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = (
+            f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
+            "tests"
+        )
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_ok=(FileWrapper, ),
+        )
+        logger.info(
+            "Retrieved tests"
+        )
+        return response  # type: ignore
+
     def _get_host(
         self,
         uri: str,
