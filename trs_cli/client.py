@@ -266,7 +266,7 @@ class TRSClient():
         Overwrites any existing tool object with the same ID.
 
         Arguments:
-            id: ToolClass id to be added.
+            id: Identifier of tool class to be created/overwritten.
             payload: Tool class data.
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
@@ -308,6 +308,7 @@ class TRSClient():
             url=url,
             method='put',
             payload=payload,
+            validation_class_ok=str,
         )
         logger.info(
             f"Registered tool class with id : {id}"
