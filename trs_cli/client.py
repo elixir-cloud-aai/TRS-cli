@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import socket
 import sys
-from typing import (Dict, List, Optional, Tuple, Union)
+from typing import (Dict, List, Optional, Tuple, Type, Union)
 import urllib3
 from urllib.parse import quote
 
@@ -26,6 +26,8 @@ from trs_cli.models import (
     Error,
     FileType,
     FileWrapper,
+    Service,
+    ServiceRegister,
     Tool,
     ToolClass,
     ToolClassRegister,
@@ -103,6 +105,99 @@ class TRSClient():
         self.headers = {}
         logger.info(f"Instantiated client for: {self.uri}")
 
+    def post_service_info(
+        self,
+        payload: Dict,
+        token: Optional[str] = None,
+    ) -> None:
+        """Register service info.
+
+        Arguments:
+            payload: Service info data.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            pydantic.ValidationError: The object data payload could not
+                be validated against the API schema.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._get_headers(
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/service-info"
+        logger.info(f"Connecting to '{url}'...")
+
+        # validate payload
+        ServiceRegister(**payload).dict()
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='post',
+            payload=payload,
+        )
+        logger.info(
+            "Registered service info"
+        )
+        return response  # type: ignore
+
+    def get_service_info(
+        self,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> Union[Service, Error]:
+        """Retrieve service info.
+
+        Arguments:
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `Service`
+            in case of a `200` response, or an instance of `Error` for all
+            other JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/service-info"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_ok=Service,
+        )
+        logger.info(
+            "Retrieved service info"
+        )
+        return response  # type: ignore
+
     def post_tool_class(
         self,
         payload: Dict,
@@ -152,9 +247,71 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
+            validation_class_ok=str,
         )
         logger.info(
             "Registered tool class"
+        )
+        return response  # type: ignore
+
+    def put_tool_class(
+        self,
+        id: str,
+        payload: Dict,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> str:
+        """
+        Create a tool class with a predefined unique ID.
+        Overwrites any existing tool object with the same ID.
+
+        Arguments:
+            id: Identifier of tool class to be created/overwritten.
+            payload: Tool class data.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            ID of registered TRS toolClass in case of a `200` response, or an
+            instance of `Error` for all other responses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            pydantic.ValidationError: The object data payload could not
+                be validated against the API schema.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # build request URL
+        url = f"{self.uri}/toolClasses/{id}"
+        logger.info(f"Connecting to '{url}'...")
+
+        # validate payload
+        ToolClassRegister(**payload).dict()
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='put',
+            payload=payload,
+            validation_class_ok=str,
+        )
+        logger.info(
+            f"Registered tool class with id : {id}"
         )
         return response  # type: ignore
 
@@ -167,7 +324,7 @@ class TRSClient():
         """Delete a tool class.
 
         Arguments:
-            id: ToolClass id to be deleted.
+            id: Identifier of tool class to be deleted.
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
@@ -201,6 +358,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
+            validation_class_ok=str,
         )
         logger.info(
             "Deleted tool class"
@@ -256,6 +414,7 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
+            validation_class_ok=str,
         )
         logger.info(
             "Registered tool"
@@ -274,7 +433,7 @@ class TRSClient():
         Overwrites any existing tool object with the same ID.
 
         Arguments:
-            id: Tool id to be added.
+            id: Identifier of tool to be created or overwritten.
             payload: Tool data.
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
@@ -316,6 +475,7 @@ class TRSClient():
             url=url,
             method='put',
             payload=payload,
+            validation_class_ok=str,
         )
         logger.info(
             f"Registered tool with id: {id}"
@@ -329,7 +489,10 @@ class TRSClient():
         token: Optional[str] = None,
     ) -> str:
         """Delete a tool.
-            id: TRS URI pointing to a given tool to be deleted
+
+            id: A unique identifier of the tool to be deleted, scoped to this
+                registry OR a TRS URI. For more information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
@@ -366,6 +529,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
+            validation_class_ok=str,
         )
         logger.info(
             "Deleted tool"
@@ -423,9 +587,76 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
+            validation_class_ok=str,
         )
         logger.info(
             "Registered tool version"
+        )
+        return response  # type: ignore
+
+    def delete_version(
+        self,
+        id: str,
+        version_id: Optional[str] = None,
+        accept: str = 'application/json',
+        token: Optional[str] = None,
+    ) -> str:
+        """Delete a tool version.
+
+        Arguments:
+            id: A unique identifier of the tool whose version is to be deleted,
+                scoped to this registry OR a TRS URI. If a TRS URI is passed
+                and includes the version identifier, passing a `version_id` is
+                optional. For more information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+            version_id: Identifier of the tool version to be deleted, scoped to
+                this registry. It is optional if a TRS URI is passed and
+                includes version information. If provided nevertheless, then
+                the `version_id` retrieved from the TRS URI is overridden.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            ID of deleted TRS tool version in case of a `200` response, or an
+            instance of `Error` for all other responses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            content_type='application/json',
+            token=token,
+        )
+
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = f"{self.uri}/tools/{_id}/versions/{_version_id}"
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            method='delete',
+            validation_class_ok=str,
+        )
+        logger.info(
+            "Deleted tool version"
         )
         return response  # type: ignore
 
@@ -470,7 +701,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=(ToolClass, ),
+            validation_class_ok=(ToolClass, ),
         )
         logger.info(
             "Retrieved tool classes"
@@ -570,7 +801,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=(Tool, ),
+            validation_class_ok=(Tool, ),
         )
         logger.info(
             "Retrieved tools"
@@ -587,6 +818,7 @@ class TRSClient():
 
         Arguments:
             id: A unique identifier of the tool, scoped to this registry OR
+                a TRS URI. For more information on TRS URIs, cf.
                 https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
@@ -624,7 +856,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=Tool,
+            validation_class_ok=Tool,
         )
         logger.info(
             "Retrieved tool"
@@ -679,7 +911,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=(ToolVersion, ),
+            validation_class_ok=(ToolVersion, ),
         )
         logger.info(
             "Retrieved tool versions"
@@ -744,7 +976,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=ToolVersion,
+            validation_class_ok=ToolVersion,
         )
         logger.info(
             "Retrieved tool version"
@@ -819,7 +1051,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=FileWrapper,
+            validation_class_ok=FileWrapper,
         )
         logger.info(
             "Retrieved descriptor"
@@ -900,7 +1132,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=FileWrapper,
+            validation_class_ok=FileWrapper,
         )
         logger.info(
             "Retrieved descriptor"
@@ -981,7 +1213,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_200=(ToolFile, ),
+            validation_class_ok=(ToolFile, ),
         )
         logger.info(
             "Retrieved files"
@@ -1226,22 +1458,22 @@ class TRSClient():
     def _send_request_and_validate_response(
         self,
         url: str,
-        validation_class_200: Optional[
-            Union[ModelMetaclass, Tuple[ModelMetaclass]]
+        validation_class_ok: Optional[
+            Union[ModelMetaclass, Tuple[ModelMetaclass], Type[str]]
         ] = None,
         validation_class_error: ModelMetaclass = Error,
         method: str = 'get',
         payload: Optional[Dict] = None,
-    ) -> Union[str, ModelMetaclass, List[ModelMetaclass]]:
+    ) -> Optional[Union[str, ModelMetaclass, List[ModelMetaclass]]]:
         """Send a HTTP equest, validate the response and handle potential
         exceptions.
 
         Arguments:
             url: The URL to send the request to.
-            validation_class_200: Type/class to be used to validate a 200
+            validation_class_ok: Type/class to be used to validate a 200
                 response. Either a Pydantic model, a tuple with a Pydantic
-                model as the only item (for list responses), or `None` (for
-                string responses).
+                model as the only item (for list responses), `str` (for
+                string responses), or `None` for no content responses.
             validation_class_error: Pydantic model to be used to validate
                 non-200 responses.
             method: HTTP method to use for the request.
@@ -1251,10 +1483,12 @@ class TRSClient():
         """
         # Process parameters
         validation_type = "model"
-        if isinstance(validation_class_200, tuple):
-            validation_class_200 = validation_class_200[0]
+        if isinstance(validation_class_ok, tuple):
+            validation_class_ok = validation_class_ok[0]
             validation_type = "list"
-        elif validation_class_200 is None:
+        elif validation_class_ok is None:
+            validation_type = None
+        elif validation_class_ok is str:
             validation_type = "str"
         try:
             request_func = eval('.'.join(['requests', method]))
@@ -1280,7 +1514,7 @@ class TRSClient():
             raise requests.exceptions.ConnectionError(
                 "Could not connect to API endpoint"
             )
-        if not response.status_code == 200:
+        if response.status_code not in [200, 201]:
             try:
                 logger.warning("Received error response")
                 return validation_class_error(**response.json())
@@ -1295,12 +1529,14 @@ class TRSClient():
             try:
                 if validation_type == "list":
                     return [
-                        validation_class_200(**obj) for obj in response.json()
-                    ]
+                        validation_class_ok(**obj) for obj in response.json()
+                    ]  # type: ignore
                 elif validation_type == "str":
                     return str(response.json())
+                elif validation_type is None:
+                    return None
                 else:
-                    return validation_class_200(**response.json())
+                    return validation_class_ok(**response.json())
             except (
                 json.decoder.JSONDecodeError,
                 pydantic.ValidationError,
