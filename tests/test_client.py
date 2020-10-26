@@ -73,7 +73,7 @@ MOCK_VERSION = {
     "author": [
         "author"
     ],
-    'containerfile': None,
+    'containerfile': True,
     'descriptor_type': [DescriptorType.CWL],
     "id": "v1",
     "images": [
@@ -589,6 +589,28 @@ class TestGetVersion:
             version_id=MOCK_ID,
         )
         assert r.dict() == MOCK_VERSION
+
+
+class TestGetContainerfile:
+    """Test getter for containerfile."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
+        "/containerfile"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
+        r = self.cli.get_containerfile(
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+        )
+        assert r.dict() == MOCK_FILE_WRAPPER
 
 
 class TestGetDescriptor:

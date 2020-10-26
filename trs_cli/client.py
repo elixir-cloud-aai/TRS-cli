@@ -1056,6 +1056,75 @@ class TRSClient():
         )
         return response  # type: ignore
 
+    def get_containerfile(
+        self,
+        id: str,
+        version_id: Optional[str] = None,
+        accept: str = 'application/json',
+        token: Optional[str] = None
+    ) -> Union[FileWrapper, Error]:
+        """Retrieve the file wrapper for the containerfile of a specified
+        tool version.
+
+        Arguments:
+            id: A unique identifier of the tool, scoped to this registry OR
+                a TRS URI. If a TRS URI is passed and includes the version
+                identifier, passing a `version_id` is optional. For more
+                information on TRS URIs, cf.
+                https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris
+            version_id: Identifier of the tool version, scoped to this
+                registry. It is optional if a TRS URI is passed and includes
+                version information. If provided nevertheless, then the
+                `version_id` retrieved from the TRS URI is overridden.
+            accept: Requested content type.
+            token: Bearer token for authentication. Set if required by TRS
+                implementation and if not provided when instatiating client or
+                if expired.
+
+        Returns:
+            Unmarshalled TRS response as either an instance of `FileWrapper` in
+            case of a `200` response, or an instance of `Error` for all other
+            JSON reponses.
+
+        Raises:
+            requests.exceptions.ConnectionError: A connection to the provided
+                TRS instance could not be established.
+            trs_cli.errors.InvalidResponseError: The response could not be
+                validated against the API schema.
+        """
+        # validate requested content type and get request headers
+        self._validate_content_type(
+            requested_type=accept,
+            available_types=['application/json', 'text/plain'],
+        )
+        self._get_headers(
+            content_accept=accept,
+            token=token,
+        )
+
+        # get/sanitize tool and version identifiers
+        _id, _version_id = self._get_tool_id_version_id(
+            tool_id=id,
+            version_id=version_id,
+        )
+
+        # build request URL
+        url = (
+            f"{self.uri}/tools/{_id}/versions/{_version_id}/"
+            "containerfile"
+        )
+        logger.info(f"Connecting to '{url}'...")
+
+        # send request
+        response = self._send_request_and_validate_response(
+            url=url,
+            validation_class_ok=FileWrapper,
+        )
+        logger.info(
+            "Retrieved containerfile"
+        )
+        return response  # type: ignore
+
     def get_descriptor(
         self,
         type: str,
