@@ -598,19 +598,20 @@ class TestGetContainerfile:
         uri=MOCK_TRS_URI,
         token=MOCK_TOKEN,
     )
-    endpoint = (
-        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
-        "/containerfile"
-    )
+    endpoint = f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/containerfile"
 
     def test_success(self, requests_mock):
         """Returns 200 response."""
-        requests_mock.get(self.endpoint, json=MOCK_FILE_WRAPPER)
-        r = self.cli.get_containerfile(
+        requests_mock.get(
+            self.endpoint,
+            json=[MOCK_FILE_WRAPPER, MOCK_FILE_WRAPPER],
+        )
+        r = self.cli.get_containerfiles(
             id=MOCK_ID,
             version_id=MOCK_ID,
         )
-        assert r.dict() == MOCK_FILE_WRAPPER
+        if not isinstance(r, Error):
+            assert r == [MOCK_FILE_WRAPPER, MOCK_FILE_WRAPPER]
 
 
 class TestGetDescriptor:

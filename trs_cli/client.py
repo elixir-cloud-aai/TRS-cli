@@ -1056,15 +1056,15 @@ class TRSClient():
         )
         return response  # type: ignore
 
-    def get_containerfile(
+    def get_containerfiles(
         self,
         id: str,
         version_id: Optional[str] = None,
         accept: str = 'application/json',
         token: Optional[str] = None
-    ) -> Union[FileWrapper, Error]:
-        """Retrieve the file wrapper for the containerfile of a specified
-        tool version.
+    ) -> Union[List[FileWrapper], Error]:
+        """Retrieve the file wrappers for all containerfiles associated with a
+        specified tool version.
 
         Arguments:
             id: A unique identifier of the tool, scoped to this registry OR
@@ -1118,10 +1118,10 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=FileWrapper,
+            validation_class_ok=(FileWrapper, ),
         )
         logger.info(
-            "Retrieved containerfile"
+            "Retrieved containerfiles"
         )
         return response  # type: ignore
 
