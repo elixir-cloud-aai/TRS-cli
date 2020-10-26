@@ -278,6 +278,35 @@ class TestPostToolClass:
             )
 
 
+class TestPutToolClass:
+    """Test putter for tool classes."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/toolClasses/{MOCK_ID}"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.put(self.endpoint, json=MOCK_ID)
+        r = self.cli.put_tool_class(
+            id=MOCK_ID,
+            payload=MOCK_TOOL_CLASS_POST
+        )
+        assert r == MOCK_ID
+
+    def test_success_ValidationError(self):
+        """Raises validation error when incorrect input is provided"""
+        with pytest.raises(ValidationError):
+            self.cli.put_tool_class(
+                id=MOCK_ID,
+                payload=MOCK_RESPONSE_INVALID
+            )
+
+
 class TestDeleteToolClass:
     """Test delete for tool classes."""
 
