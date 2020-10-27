@@ -711,6 +711,32 @@ class TestGetFiles:
             assert r[0].path == MOCK_TOOL_FILE['path']
 
 
+class TestGetTests:
+    """Test getter for tests."""
+
+    cli = TRSClient(
+        uri=MOCK_TRS_URI,
+        token=MOCK_TOKEN,
+    )
+    endpoint = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}/tests"
+    )
+
+    def test_success(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(
+            self.endpoint,
+            json=[MOCK_FILE_WRAPPER, MOCK_FILE_WRAPPER],
+        )
+        r = self.cli.get_tests(
+            id=MOCK_ID,
+            type=MOCK_DESCRIPTOR,
+            version_id=MOCK_ID,
+        )
+        if not isinstance(r, Error):
+            assert r == [MOCK_FILE_WRAPPER, MOCK_FILE_WRAPPER]
+
+
 class TestRetrieveFiles:
     """Test retrieving files of a given descriptor type."""
 
