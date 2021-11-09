@@ -43,6 +43,7 @@ class DescriptorType(str, Enum):
     WDL = 'WDL'
     NFL = 'NFL'
     GALAXY = 'GALAXY'
+    SMK = 'SMK'
 
 
 class Error(CustomBaseModel):
