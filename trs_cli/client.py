@@ -1140,8 +1140,8 @@ class TRSClient():
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include "CWL",
-                "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL", "PLAIN_NFL",
-                "PLAIN_GALAXY".
+                "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
             id: A unique identifier of the tool, scoped to this registry OR
                 a TRS URI. If a TRS URI is passed and includes the version
                 identifier, passing a `version_id` is optional. For more
@@ -1217,8 +1217,8 @@ class TRSClient():
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include "CWL",
-                "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL", "PLAIN_NFL",
-                "PLAIN_GALAXY".
+                "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
             path: Path, including filename, of descriptor or associated file
                 relative to the primary descriptor file.
             id: A unique identifier of the tool, scoped to this registry OR
@@ -1296,8 +1296,8 @@ class TRSClient():
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include "CWL",
-                "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL", "PLAIN_NFL",
-                "PLAIN_GALAXY".
+                "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
             id: A unique identifier of the tool, scoped to this registry OR
                 a hostname-based TRS URI. If TRS URIs include the version
                 information, passing a `version_id` is optional.
@@ -1377,8 +1377,8 @@ class TRSClient():
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include "CWL",
-                "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL", "PLAIN_NFL",
-                "PLAIN_GALAXY".
+                "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
             id: A unique identifier of the tool, scoped to this registry OR
                 a TRS URI. If a TRS URI is passed and includes the version
                 identifier, passing a `version_id` is optional. For more
@@ -1455,8 +1455,8 @@ class TRSClient():
             type: The output type of the descriptor. Plain types return
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include
-                "CWL", "WDL", "NFL", "GALAXY", "PLAIN_CWL", "PLAIN_WDL",
-                "PLAIN_NFL", "PLAIN_GALAXY".
+                "CWL", "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
             id: A unique identifier of the tool, scoped to this registry OR
                 a hostname-based TRS URI. If TRS URIs include the version
                 information, passing a `version_id` is optional.
