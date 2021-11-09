@@ -1,9 +1,4 @@
-coverage==5.2.1
-coveralls==2.1.2
-docutils==0.17.1
-flake8==3.8.3
 pydantic==1.6.1
-pytest==6.0.1
 requests==2.24.0
 requests-mock==1.8.0
 responses==0.12.0
