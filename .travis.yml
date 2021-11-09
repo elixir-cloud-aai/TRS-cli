@@ -7,6 +7,10 @@ python:
   - "3.7"
   - "3.8"
 
+install:
+  - pip install -r requirements_dev.txt
+  - python setup.py install
+
 # Build once for pushes to the repo, and once for PR from forks
 if: (type == push) OR (type == pull_request AND fork == true)
 

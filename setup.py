@@ -30,10 +30,10 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     install_requires=[
-        'pydantic==1.6.1',
-        'requests==2.24.0',
-        'requests-mock==1.8.0',
-        'responses==0.12.0',
+        'pydantic>=1.6.1',
+        'requests>=2.24.0',
+        'requests-mock>=1.8.0',
+        'responses>=0.12.0',
     ],
     python_requires='>=3.6'
 )
