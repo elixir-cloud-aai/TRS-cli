@@ -1217,7 +1217,7 @@ class TRSClient():
         path: str,
         id: str,
         version_id: Optional[str] = None,
-        is_encoded: bool = False,
+        encode_path: bool = False,
         accept: str = 'application/json',
         token: Optional[str] = None
     ) -> Union[FileWrapper, Error]:
@@ -1241,7 +1241,8 @@ class TRSClient():
                 registry. It is optional if a TRS URI is passed and includes
                 version information. If provided nevertheless, then the
                 `version_id` retrieved from the TRS URI is overridden.
-            is_encoded: Value of `path` is already percent/URL-encoded.
+            encode_path: Percent/URL-encode `path` (may be required by some
+                TRS implementations).
             accept: Requested content type.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
@@ -1275,7 +1276,7 @@ class TRSClient():
         )
 
         # build request URL
-        _path = path if is_encoded else quote(path, safe='')
+        _path = quote(path, safe='') if encode_path else path
         url = (
             f"{self.uri}/tools/{_id}/versions/{_version_id}/{type}/"
             f"descriptor/{_path}"
@@ -1454,7 +1455,7 @@ class TRSClient():
         type: str,
         id: str,
         version_id: Optional[str] = None,
-        is_encoded: bool = False,
+        encode_path: bool = False,
         token: Optional[str] = None,
     ) -> Dict[str, List[str]]:
         """Write tool version file contents for a given descriptor type to
@@ -1475,8 +1476,8 @@ class TRSClient():
                 to this registry. It is optional if version info is included
                 in the TRS URI. If passed, then the existing `version_id`
                 retreived from the TRS URI is overridden.
-            is_encoded: Values or relative paths of files are already
-                percent/URL-encoded.
+            encode_path: Percent/URL-encode relative paths of files (may be
+                required by some TRS implementations).
 
         Returns:
             Dictionary of `FileType` enumerator values (e.g., `TEST_FILE`,
@@ -1520,7 +1521,7 @@ class TRSClient():
                 path=_f.path,
                 id=id,
                 version_id=version_id,
-                is_encoded=is_encoded,
+                encode_path=encode_path,
                 token=token,
             )
             if not isinstance(file_wrapper, FileWrapper):
