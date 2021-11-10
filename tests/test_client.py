@@ -1122,6 +1122,15 @@ class TestSendRequestAndValidateRespose:
                 url=MOCK_API,
             )
 
+    def test_no_validation(self, requests_mock):
+        TRSClient.config(no_validate=True)
+        requests_mock.get(self.endpoint, text=MOCK_ID)
+        response = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+        )
+        assert response.text == MOCK_ID
+        TRSClient.config(no_validate=False)
+
     def test_get_str_validation(self, requests_mock):
         """Test for getter with string response."""
         requests_mock.get(self.endpoint, json=MOCK_ID)

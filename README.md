@@ -41,20 +41,23 @@ from trs_cli import TRSClient
 ### Configure client class
 
 It is possible to configure the `TRSClient` class with the `.config()` class
-method. Currently there is only a single configuration parameter available,
-the `debug` flag. Setting it to `True` (default: False) will have the exception
-handler print tracebacks for every exception encountered.
+method. The following configuration parameters are available:
+
+| Parameter | Type | Default | Description |
+| --- | --- | ---- | --- |
+| `debug` | `bool` | `False` | If set, the exception handler prints tracebacks for every exception encountered. |
+| `no_validate` | `bool` | `False` | If set, responses are not validated. In that case, unserialized `response` objects are returned. |
 
 Example:
 
 ```py
 from trs_cli import TRSClient
 
-TRSClient.config(debug=True)
+TRSClient.config(debug=True, no_validate=True)
 ```
 
 > Note that as a _class method_, the `.config()` method will affect _all_
-> client instances.
+> client instances, including existing ones.
 
 ### Create client instance
 

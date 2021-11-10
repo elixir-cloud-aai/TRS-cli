@@ -87,15 +87,26 @@ class TRSClient():
         rf"(\/versions\/(?P<version_id>{_RE_TRS_ID}))?$"
     )
 
+    # class configuration variables
+    no_validate: bool = False
+
     @classmethod
     def config(
         cls,
         debug: bool = False,
-    ):
+        no_validate: bool = False,
+    ) -> None:
+        """Class configuration.
+
+        Args:
+            debug: Set to print error tracebacks.
+            no_validate: Set to skip validation of error responses.
+        """
         if debug:
             sys.excepthook = partial(exception_handler, print_traceback=True)
         else:
             sys.excepthook = partial(exception_handler, print_traceback=False)
+        cls.no_validate = no_validate
 
     def __init__(
         self,
@@ -1681,7 +1692,8 @@ class TRSClient():
         """
         if requested_type not in available_types:
             raise ContentTypeUnavailable(
-                "Requested content type not provided by the service"
+                f"Requested content type '{requested_type}' not provided by "
+                f"the service; available types: {available_types}"
             )
 
     def _send_request_and_validate_response(
@@ -1693,7 +1705,11 @@ class TRSClient():
         validation_class_error: ModelMetaclass = Error,
         method: str = 'get',
         payload: Optional[Dict] = None,
-    ) -> Optional[Union[str, ModelMetaclass, List[ModelMetaclass]]]:
+    ) -> Optional[Union[
+                str,
+                requests.models.Response,
+                ModelMetaclass, List[ModelMetaclass],
+            ]]:
         """Send a HTTP equest, validate the response and handle potential
         exceptions.
 
@@ -1708,17 +1724,10 @@ class TRSClient():
             method: HTTP method to use for the request.
 
         Returns:
-            Unmarshalled response.
+            Unmarshalled response (default) or unserialized response if
+            class configuration flag `TRSClient.no_validate` is set.
         """
-        # Process parameters
-        validation_type = "model"
-        if isinstance(validation_class_ok, tuple):
-            validation_class_ok = validation_class_ok[0]
-            validation_type = "list"
-        elif validation_class_ok is None:
-            validation_type = None
-        elif validation_class_ok is str:
-            validation_type = "str"
+        # Validate HTTP method
         try:
             request_func = eval('.'.join(['requests', method]))
         except AttributeError as e:
@@ -1732,7 +1741,7 @@ class TRSClient():
         if payload is not None:
             kwargs['json'] = payload
 
-        # Send request and manage response
+        # Send request
         try:
             response = request_func(**kwargs)
         except (
@@ -1743,6 +1752,20 @@ class TRSClient():
             raise requests.exceptions.ConnectionError(
                 "Could not connect to API endpoint"
             )
+
+        # skip validation
+        if TRSClient.no_validate:
+            return response
+
+        # set validation parameters
+        validation_type = "model"
+        if isinstance(validation_class_ok, tuple):
+            validation_class_ok = validation_class_ok[0]
+            validation_type = "list"
+        elif validation_class_ok is None:
+            validation_type = None
+        elif validation_class_ok is str:
+            validation_type = "str"
         if response.status_code not in [200, 201]:
             logger.warning(
                 f"Received error response: {response.status_code}"
