@@ -2,6 +2,7 @@
 
 [![License][badge-license]][badge-url-license]
 [![Build_status][badge-build-status]][badge-url-build-status]
+[![Docs][badge-docs]][badge-url-docs]
 [![Coverage][badge-coverage]][badge-url-coverage]
 [![GitHub_tag][badge-github-tag]][badge-url-github-tag]
 [![PyPI_release][badge-pypi]][badge-url-pypi]
@@ -12,12 +13,32 @@ including support for additional endpoints defined in [ELIXIR Cloud &
 AAI's][res-elixir-cloud] generic [TRS-Filer][res-elixir-cloud-trs-filer] TRS
 implementation.
 
+## Table of Contents
+
+* [Usage](#usage)
+  * [Configure client class](#configure-client-class)
+  * [Create client instance](#create-client-instance)
+  * [Access methods](#access-methods)
+  * [Authorization](#authorization)
+* [API documentation](#api-documentation)
+* [Installation](#installation)
+  * [Via package manager](#via-package-manager)
+  * [Manual installation](#manual-installation)
+* [Contributing](#contributing)
+* [Versioning](#versioning)
+* [License](#license)
+* [Contact](#contact)
+
 ## Usage
 
 To use the client import it as follows in your Python code after
 [installation](#Installation):
 
-### Configure `TRSClient` class
+```py
+from trs_cli import TRSClient
+```
+
+### Configure client class
 
 It is possible to configure the `TRSClient` class with the `.config()` class
 method. Currently there is only a single configuration parameter available,
@@ -97,7 +118,7 @@ client = TRSClient(
 # Client instantiated for URL: http://my-trs.app:443/ga4gh/trs/v1
 ```
 
-### Access endpoints
+### Access methods
 
 > **NOTES:**
 >  
@@ -109,18 +130,55 @@ client = TRSClient(
 >   [Pydantic][res-pydantic] models instead. If dictionaries are preferred
 >   instead, they can be obtained with `response.dict()`. See the [Pydantic
 >   export documentation][res-pydantic-docs-export] for further details.
+> * See the [API documentation][docs-api] for further details on each access
+>   method.
 
-#### `GET` endpoints
+#### Endpoints as specified in the TRS API
 
-Coming soon...
+Access methods for each [Tool Registry Service API][res-ga4gh-trs] endpoint
+are available:
 
-#### `POST` & `PUT` endpoints
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| [`.get_tool_classes()`][docs-api-get_tool_classes] | `GET ​/toolClasses` | List all tool types |
+| [`.get_tools()`][docs-api-get_tools] | `GET ​/tools` | List all tools |
+| [`.get_tool()`][docs-api-get_tool] | `GET ​/tools​/{id}` | List one specific tool, acts as an anchor for self references |
+| [`.get_versions()`][docs-api-get_versions] | `GET ​/tools​/{id}​/versions` | List versions of a tool |
+| [`.get_version()`][docs-api-get_version] | `GET ​/tools​/{id}​/versions​/{version_id}` | List one specific tool version, acts as an anchor for self references |
+| [`.get_containerfiles()`][docs-api-get_containerfiles] | `GET ​/tools​/{id}​/versions​/{version_id}​/containerfile` | Get the container specification(s) for the specified image. |
+| [`.get_descriptor()`][docs-api-get_descriptor] | `GET ​/tools​/{id}​/versions​/{version_id}​/{type}​/descriptor` | Get the tool descriptor for the specified tool |
+| [`.get_descriptor_by_path()`][docs-api-get_descriptor_by_path] | `GET ​/tools​/{id}​/versions​/{version_id}​/{type}​/descriptor​/{relative_path}` | Get additional tool descriptor files relative to the main file |
+| [`.get_files()`][docs-api-get_files] | `GET ​/tools​/{id}​/versions​/{version_id}​/{type}​/files` | Get a list of objects that contain the relative path and file type |
+| [`.get_tests()`][docs-api-get_tests] | `GET ​/tools​/{id}​/versions​/{version_id}​/{type}​/tests` | Get a list of test JSONs |
+| [`.get_service_info()`][docs-api-get_service_info] | `GET ​/service-info` | Show information about this service. It is assumed that removing this endpoint from a URL will result in a valid URL to query against |
 
-Coming soon...
+#### TRS-Filer-specific endpoints
 
-#### `DELETE` endpoints
+In addition to TRS API endpoints, the `TRSClient` class also provides access
+methods for additional endpoints implemented in
+[TRS-Filer][res-elixir-cloud-trs-filer]:
 
-Coming soon...
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| [`.post_tool_class()`][docs-api-post_tool_class] | `POST ​/toolClasses` | Create a tool class |
+| [`.put_tool_class()`][docs-api-put_tool_class] | `PUT ​/toolClasses​/{id}` | Create or update a tool class |
+| [`.delete_tool_class()`][docs-api-delete_tool_class] | `DELETE ​/toolClasses​/{id}` | Delete a tool class |
+| [`.post_tool()`][docs-api-post_tool] | `POST ​/tools` | Add a tool |
+| [`.put_tool()`][docs-api-put_tool] | `PUT ​/tools​/{id}` | Add or update a tool |
+| [`.delete_tool()`][docs-api-delete_tool] | `DELETE ​/tools​/{id}` | Delete a tool |
+| [`.post_version()`][docs-api-post_version] | `POST ​/tools​/{id}​/versions` | Add a tool version |
+| [`.put_version()`][docs-api-put_version] | `PUT ​/tools​/{id}​/versions​/{version_id}` | Add or update a tool version |
+| [`.delete_version()`][docs-api-delete_version] | `DELETE ​/tools​/{id}​/versions​/{version_id}` | Delete a tool version |
+| [`.post_service_info()`][docs-api-post_service_info] | `POST ​/service-info` | Register service info |
+
+#### Convenience methods
+
+Finally, TRS-cli tries to provide convenience methods for common operations
+that involve multiple API calls.  Currently there is one such method defined:
+
+| Method | Description |
+| --- | --- |
+| [`.retrieve_files()`][docs-api-retrieve_files] | Retrieve all files associated with a given tool version and descriptor type. Useful for downloading workflows. |
 
 ### Authorization
 
@@ -151,7 +209,7 @@ client_2 = TRSClient(
 # Value of client_2.token: MyT0k3n
 ```
 
-## API docs
+## API documentation
 
 Automatically built [API documentation][docs-api] is available.
 
@@ -159,7 +217,7 @@ Automatically built [API documentation][docs-api] is available.
 
 You can install `TRS-cli` in one of two ways:
 
-### Installation via package manager
+### Via package manager
 
 ```bash
 pip install trs_cli
@@ -207,15 +265,39 @@ question etc.
 
 [badge-build-status]:<https://travis-ci.com/elixir-cloud-aai/TRS-cli.svg?branch=dev>
 [badge-coverage]:<https://img.shields.io/coveralls/github/elixir-cloud-aai/TRS-cli>
+[badge-docs]: <https://readthedocs.org/projects/trs-cli/badge/?version=latest>
 [badge-github-tag]:<https://img.shields.io/github/v/tag/elixir-cloud-aai/TRS-cli?color=C39BD3>
 [badge-license]:<https://img.shields.io/badge/license-Apache%202.0-blue.svg>
 [badge-pypi]:<https://img.shields.io/pypi/v/trs-cli.svg?style=flat&color=C39BD3>
 [badge-url-build-status]:<https://travis-ci.com/elixir-cloud-aai/TRS-cli>
 [badge-url-coverage]:<https://coveralls.io/github/elixir-cloud-aai/TRS-cli>
+[badge-url-docs]: <https://trs-cli.readthedocs.io/en/latest/?badge=latest>
 [badge-url-github-tag]:<https://github.com/elixir-cloud-aai/TRS-cli/releases>
 [badge-url-license]:<http://www.apache.org/licenses/LICENSE-2.0>
 [badge-url-pypi]:<https://pypi.python.org/pypi/trs-cli>
 [docs-api]: <https://trs-cli.readthedocs.io/en/latest/>
+[docs-api-delete_tool]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.delete_tool>
+[docs-api-delete_tool_class]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.delete_tool_class>
+[docs-api-delete_version]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.delete_version>
+[docs-api-get_containerfiles]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_containerfiles>
+[docs-api-get_descriptor]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_descriptor>
+[docs-api-get_descriptor_by_path]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_descriptor_by_path>
+[docs-api-get_files]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_files>
+[docs-api-get_service_info]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_service_info>
+[docs-api-get_tests]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_tests>
+[docs-api-get_tool]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_tool>
+[docs-api-get_tool_classes]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_tool_classes>
+[docs-api-get_tools]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_tools>
+[docs-api-get_version]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_version>
+[docs-api-get_versions]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.get_versions>
+[docs-api-post_service_info]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.post_service_info>
+[docs-api-post_tool]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.post_tool>
+[docs-api-post_tool_class]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.post_tool_class>
+[docs-api-post_version]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.post_version>
+[docs-api-put_tool]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.put_tool>
+[docs-api-put_tool_class]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.put_tool_class>
+[docs-api-put_version]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.put_version>
+[docs-api-retrieve_files]: <https://trs-cli.readthedocs.io/en/latest/modules/trs_cli.html#trs_cli.client.TRSClient.retrieve_files>
 [license]: LICENSE
 [license-apache]: <https://www.apache.org/licenses/LICENSE-2.0>
 [logo_banner]: images/logo-banner.png

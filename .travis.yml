@@ -10,6 +10,7 @@ python:
 
 install:
   - pip install -r requirements_dev.txt
+  - pip install -r requirements.txt
   - python setup.py install
 
 # Build once for pushes to the repo, and once for PR from forks
