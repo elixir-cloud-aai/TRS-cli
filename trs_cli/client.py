@@ -1,5 +1,6 @@
 """Class implementing TRS client."""
 
+from functools import partial
 import json
 import logging
 from pathlib import Path
@@ -38,7 +39,7 @@ from trs_cli.models import (
 )
 
 logger = logging.getLogger(__name__)
-sys.excepthook = exception_handler
+sys.excepthook = partial(exception_handler, print_traceback=False)
 
 
 class TRSClient():
@@ -85,6 +86,16 @@ class TRSClient():
         rf"^(trs:\/\/{_RE_DOMAIN}\/)?(?P<tool_id>{_RE_TRS_ID})"
         rf"(\/versions\/(?P<version_id>{_RE_TRS_ID}))?$"
     )
+
+    @classmethod
+    def config(
+        cls,
+        debug: bool = False,
+    ):
+        if debug:
+            sys.excepthook = partial(exception_handler, print_traceback=True)
+        else:
+            sys.excepthook = partial(exception_handler, print_traceback=False)
 
     def __init__(
         self,

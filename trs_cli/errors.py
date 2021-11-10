@@ -1,4 +1,5 @@
 import logging
+import traceback as tb
 from types import TracebackType
 
 logger = logging.getLogger(__name__)
@@ -7,14 +8,18 @@ logger = logging.getLogger(__name__)
 def exception_handler(
     _type: type,
     value: BaseException,
-    traceback: TracebackType
+    traceback: TracebackType,
+    print_traceback: bool = False,
 ) -> None:
     """Error handler for all exceptions."""
-    if str(value):
-        msg = f"{_type.__name__}: {value}"
-    else:
-        msg = f"{_type.__name__}"
+    msg = ""
+    if hasattr(_type, "__name__"):
+        msg = (
+            f"{_type.__name__}: {value}" if str(value) else f"{_type.__name__}"
+        )
     logger.error(msg)
+    if print_traceback:
+        tb.print_tb(traceback)
 
 
 class ContentTypeUnavailable(Exception):

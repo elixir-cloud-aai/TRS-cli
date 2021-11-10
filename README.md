@@ -17,6 +17,24 @@ implementation.
 To use the client import it as follows in your Python code after
 [installation](#Installation):
 
+### Configure `TRSClient` class
+
+It is possible to configure the `TRSClient` class with the `.config()` class
+method. Currently there is only a single configuration parameter available,
+the `debug` flag. Setting it to `True` (default: False) will have the exception
+handler print tracebacks for every exception encountered.
+
+Example:
+
+```py
+from trs-cli.client import TRSClient
+
+TRSClient.config(debug=True)
+```
+
+> Note that as a _class method_, the `.config()` method will affect _all_
+> client instances.
+
 ### Create client instance
 
 #### Via TRS hostname
