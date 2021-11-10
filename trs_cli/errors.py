@@ -12,14 +12,17 @@ def exception_handler(
     print_traceback: bool = False,
 ) -> None:
     """Error handler for all exceptions."""
-    msg = ""
-    if hasattr(_type, "__name__"):
-        msg = (
-            f"{_type.__name__}: {value}" if str(value) else f"{_type.__name__}"
-        )
-    logger.error(msg)
     if print_traceback:
-        tb.print_tb(traceback)
+        tb.print_exception(etype=_type, value=value, tb=traceback)
+    else:
+        msg = ""
+        if hasattr(_type, "__name__"):
+            msg = (
+                f"{_type.__name__}: {value}"
+                if str(value)
+                else f"{_type.__name__}"
+            )
+        logger.error(msg)
 
 
 class ContentTypeUnavailable(Exception):
