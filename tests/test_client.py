@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 import pathlib  # noqa: F401
+import sys
 
 from pydantic import ValidationError
 import pytest
@@ -178,6 +179,20 @@ MOCK_TOOL_CLASS_POST = {
 def _raise(exception) -> None:
     """General purpose exception raiser."""
     raise exception
+
+
+class TestTRSClientConfig:
+    """Test TRSClient class method .config()."""
+
+    def test_default(self):
+        """Call method with default arguments."""
+        TRSClient.config()
+        assert sys.excepthook.keywords['print_traceback'] is False
+
+    def test_debug(self):
+        """Call method with default arguments."""
+        TRSClient.config(debug=True)
+        assert sys.excepthook.keywords['print_traceback'] is True
 
 
 class TestTRSClientConstructor:
