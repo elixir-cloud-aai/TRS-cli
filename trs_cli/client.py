@@ -188,7 +188,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -771,7 +771,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -848,7 +848,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -978,7 +978,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -1040,7 +1040,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -1106,7 +1106,7 @@ class TRSClient():
         # validate requested content type and get request headers
         self._validate_content_type(
             requested_type=accept,
-            available_types=['application/json', 'text/plain'],
+            available_types=['application/json'],
         )
         self._get_headers(
             content_accept=accept,
@@ -1743,16 +1743,18 @@ class TRSClient():
                 "Could not connect to API endpoint"
             )
         if response.status_code not in [200, 201]:
+            logger.warning(
+                f"Received error response: {response.status_code}"
+            )
             try:
-                logger.warning("Received error response")
                 return validation_class_error(**response.json())
             except (
                 json.decoder.JSONDecodeError,
                 pydantic.ValidationError,
-            ):
+            ) as exc:
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
-                )
+                ) from exc
         else:
             try:
                 if validation_type == "list":
@@ -1768,7 +1770,7 @@ class TRSClient():
             except (
                 json.decoder.JSONDecodeError,
                 pydantic.ValidationError,
-            ):
+            ) as exc:
                 raise InvalidResponseError(
                     "Response could not be validated against API schema"
-                )
+                ) from exc
