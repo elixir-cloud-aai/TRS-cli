@@ -27,7 +27,7 @@ handler print tracebacks for every exception encountered.
 Example:
 
 ```py
-from trs-cli.client import TRSClient
+from trs_cli import TRSClient
 
 TRSClient.config(debug=True)
 ```
@@ -43,7 +43,7 @@ A client instance can be created by specifying the domain name of a TRS
 instance, including the URL schema:
 
 ```py
-from trs_cli.client import TRSClient
+from trs_cli import TRSClient
 
 client = TRSClient(uri="https://my-trs.app")
 # Client instantiated for URL: https://my-trs.app:443/ga4gh/trs/v2
@@ -57,7 +57,7 @@ port `80`), and the port and base path at which the API endpoints are served
 can be overridden with the `port` and `base_path` arguments:
 
 ```py
-from trs_cli.client import TRSClient
+from trs_cli import TRSClient
 
 client = TRSClient(
     uri="http://my-trs.app",
@@ -73,7 +73,7 @@ Clients can also be created by passing a [hostname-based TRS
 URI][res-ga4gh-trs-uri]:
 
 ```py
-from trs_cli.client import TRSClient
+from trs_cli import TRSClient
 
 client = TRSClient(uri="trs://my-trs.app/SOME_TOOL")
 # Client instantiated for URL: https://my-trs.app:443/ga4gh/trs/v1
@@ -88,7 +88,7 @@ client for an `http` URL when a TRS URI is passed. The flag has no effect
 when a TRS hostname URL is provided instead of a TRS URI:
 
 ```py
-from trs_cli.client import TRSClient
+from trs_cli import TRSClient
 
 client = TRSClient(
     uri="trs://my-trs.app/SOME_TOOL",
@@ -137,7 +137,7 @@ the instantiated client instance.
 The following example illustrates this behavior:
 
 ```py
-from trs_cli.client import TRSClient
+from trs_cli import TRSClient
 
 # No token passed during client instantiation
 client = TRSClient(uri="https://my-trs.app")
@@ -164,7 +164,7 @@ You can install `TRS-cli` in one of two ways:
 ```bash
 pip install trs_cli
 
-# Or for latest development version:
+# Or for the latest development version:
 pip install git+https://github.com/elixir-cloud-aai/TRS-cli.git#egg=trs_cli
 ```
 
