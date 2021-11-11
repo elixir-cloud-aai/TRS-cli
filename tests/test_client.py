@@ -32,6 +32,7 @@ MOCK_BASE_PATH = "a/b/c"
 MOCK_API = f"{MOCK_HOST}:{MOCK_PORT}/{MOCK_BASE_PATH}"
 MOCK_ID = "123456"
 MOCK_ID_INVALID = "N0T VAL!D"
+MOCK_TEXT_PLAIN = "SOME TEXT"
 MOCK_TRS_URI = f"trs://{MOCK_DOMAIN}/{MOCK_ID}"
 MOCK_TRS_URI_VERSIONED = f"trs://{MOCK_DOMAIN}/{MOCK_ID}/versions/{MOCK_ID}"
 MOCK_TOKEN = "MyT0k3n"
@@ -489,7 +490,7 @@ class TestDeleteVersion:
         f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}"
     )
 
-    def test_success(self, monkeypatch, requests_mock):
+    def test_success(self, requests_mock):
         """Returns 200 response."""
         requests_mock.delete(self.endpoint, json=MOCK_ID)
         r = self.cli.delete_version(
@@ -665,6 +666,10 @@ class TestGetDescriptorByPath:
         f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/{MOCK_DESCRIPTOR}"
         f"/descriptor/{MOCK_ID}"
     )
+    endpoint_plain = (
+        f"{cli.uri}/tools/{MOCK_ID}/versions/{MOCK_ID}/PLAIN_{MOCK_DESCRIPTOR}"
+        f"/descriptor/{MOCK_ID}"
+    )
 
     def test_success(self, requests_mock):
         """Returns 200 response."""
@@ -676,6 +681,17 @@ class TestGetDescriptorByPath:
             path=MOCK_ID,
         )
         assert r.dict() == MOCK_FILE_WRAPPER
+
+    def test_success_plain(self, requests_mock):
+        """Returns 200 response."""
+        requests_mock.get(self.endpoint_plain, text=MOCK_TEXT_PLAIN)
+        r = self.cli.get_descriptor_by_path(
+            type=f"PLAIN_{MOCK_DESCRIPTOR}",
+            id=MOCK_ID,
+            version_id=MOCK_ID,
+            path=MOCK_ID,
+        )
+        assert r.text == MOCK_TEXT_PLAIN
 
 
 class TestGetFiles:
@@ -713,17 +729,85 @@ class TestGetFiles:
                 format=MOCK_ID,
             )
 
-    def test_success_trs_uri_zip(self, requests_mock):
+    def test_success_trs_uri_zip(self, requests_mock, tmpdir):
         """Returns 200 ZIP response with TRS URI."""
-        requests_mock.get(self.endpoint, json=[MOCK_TOOL_FILE])
+        outfile = tmpdir / 'test.zip'
+        requests_mock.get(self.endpoint)
         r = self.cli.get_files(
             type=MOCK_DESCRIPTOR,
             id=MOCK_TRS_URI_VERSIONED,
             format='zip',
+            outfile=outfile,
         )
-        if not isinstance(r, Error):
-            assert r[0].file_type.value == MOCK_TOOL_FILE['file_type']
-            assert r[0].path == MOCK_TOOL_FILE['path']
+        assert r == outfile
+
+    def test_success_trs_uri_zip_default_filename(
+                self,
+                requests_mock,
+                monkeypatch,
+            ):
+        """Returns 200 ZIP response with default filename."""
+        requests_mock.get(self.endpoint)
+        monkeypatch.setattr(
+            'builtins.open',
+            lambda *args, **kwargs: _raise(Exception)
+        )
+        with pytest.raises(Exception):
+            self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_TRS_URI_VERSIONED,
+                format='zip',
+            )
+
+    def test_zip_content_type(self, requests_mock, tmpdir):
+        """Test wrong content type."""
+        outfile = tmpdir / 'test.zip'
+        requests_mock.get(
+            self.endpoint,
+            headers={'Content-Type': 'text/plain'},
+        )
+        r = self.cli.get_files(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_TRS_URI_VERSIONED,
+            format='zip',
+            outfile=outfile,
+        )
+        print(r)
+        print(type(r))
+        print(dir(r))
+        print(r.headers)
+        assert isinstance(r, requests.models.Response)
+
+    def test_zip_io_error(self, monkeypatch, requests_mock, tmpdir):
+        """Test I/O error."""
+        outfile = tmpdir / 'test.zip'
+        requests_mock.get(self.endpoint)
+        monkeypatch.setattr(
+            'builtins.open',
+            lambda *args, **kwargs: _raise(IOError)
+        )
+        r = self.cli.get_files(
+            type=MOCK_DESCRIPTOR,
+            id=MOCK_TRS_URI_VERSIONED,
+            format='zip',
+            outfile=outfile,
+        )
+        assert isinstance(r, requests.models.Response)
+
+    def test_zip_connection_error(self, monkeypatch, tmpdir):
+        """Test connection error."""
+        outfile = tmpdir / 'test.zip'
+        monkeypatch.setattr(
+            'requests.get',
+            lambda *args, **kwargs: _raise(requests.exceptions.ConnectionError)
+        )
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.cli.get_files(
+                type=MOCK_DESCRIPTOR,
+                id=MOCK_TRS_URI_VERSIONED,
+                format='zip',
+                outfile=outfile,
+            )
 
 
 class TestGetTests:
@@ -1108,6 +1192,9 @@ class TestSendRequestAndValidateRespose:
     """Test request sending and response validation."""
 
     cli = TRSClient(uri=MOCK_TRS_URI)
+    cli.headers = {
+        'Accept': 'application/json'
+    }
     endpoint = MOCK_API
     payload = {}
 
@@ -1136,7 +1223,7 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=MOCK_ID)
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         assert response == MOCK_ID
 
@@ -1145,7 +1232,7 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=MOCK_ID)
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_ok=None,
+            json_validation_class=None,
         )
         assert response is None
 
@@ -1154,7 +1241,7 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=MOCK_TOOL)
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_ok=Tool,
+            json_validation_class=Tool,
         )
         assert response == MOCK_TOOL
 
@@ -1163,7 +1250,7 @@ class TestSendRequestAndValidateRespose:
         requests_mock.get(self.endpoint, json=[MOCK_TOOL])
         response = self.cli._send_request_and_validate_response(
             url=MOCK_API,
-            validation_class_ok=(Tool, ),
+            json_validation_class=(Tool, ),
         )
         assert response == [MOCK_TOOL]
 
@@ -1174,7 +1261,7 @@ class TestSendRequestAndValidateRespose:
             url=MOCK_API,
             method='post',
             payload=self.payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         assert response == MOCK_ID
 
@@ -1184,7 +1271,7 @@ class TestSendRequestAndValidateRespose:
         with pytest.raises(InvalidResponseError):
             self.cli._send_request_and_validate_response(
                 url=MOCK_API,
-                validation_class_ok=Error,
+                json_validation_class=Error,
             )
 
     def test_error_response(self, requests_mock):
@@ -1197,12 +1284,12 @@ class TestSendRequestAndValidateRespose:
 
     def test_error_response_invalid(self, requests_mock):
         """Test for error response that fails validation."""
-        requests_mock.get(self.endpoint, json=MOCK_ERROR, status_code=400)
+        requests_mock.get(self.endpoint, json=MOCK_TOOL, status_code=400)
         with pytest.raises(InvalidResponseError):
-            self.cli._send_request_and_validate_response(
+            bla = self.cli._send_request_and_validate_response(
                 url=MOCK_API,
-                validation_class_error=Tool,
             )
+            print(bla)
 
     def test_invalid_http_method(self, requests_mock):
         """Test for invalid HTTP method."""
@@ -1213,3 +1300,17 @@ class TestSendRequestAndValidateRespose:
                 method='non_existing',
                 payload=self.payload,
             )
+
+    def test_text_plain_responses(self, requests_mock):
+        """Test for invalid HTTP method."""
+        requests_mock.get(
+            self.endpoint,
+            text=MOCK_TEXT_PLAIN,
+            headers={'Content-Type': 'text/plain'},
+        )
+        self.cli.headers['Accept'] = 'text/plain'
+        r = self.cli._send_request_and_validate_response(
+            url=MOCK_API,
+        )
+        assert r == MOCK_TEXT_PLAIN
+        self.cli.headers['Accept'] = 'application/json'

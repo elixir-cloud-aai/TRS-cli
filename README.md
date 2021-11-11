@@ -13,6 +13,14 @@ including support for additional endpoints defined in [ELIXIR Cloud &
 AAI's][res-elixir-cloud] generic [TRS-Filer][res-elixir-cloud-trs-filer] TRS
 implementation.
 
+The TRS API version underlying the client can be found
+[here][res-ga4gh-trs-version].
+
+TRS-cli has so far been succesfully tested with the
+[TRS-Filer][res-elixir-cloud-trs-filer] and
+[WorkflowHub][res-eosc-workflow-hub] TRS implementations. WorkflowHub's public
+TRS API endpoint can be found here: <https://dev.workflowhub.eu/ga4gh/trs/v2>
+
 ## Table of Contents
 
 * [Usage](#usage)
@@ -46,7 +54,7 @@ method. The following configuration parameters are available:
 | Parameter | Type | Default | Description |
 | --- | --- | ---- | --- |
 | `debug` | `bool` | `False` | If set, the exception handler prints tracebacks for every exception encountered. |
-| `no_validate` | `bool` | `False` | If set, responses are not validated. In that case, unserialized `response` objects are returned. |
+| `no_validate` | `bool` | `False` | If set, responses JSON are not validated against the TRS API schemas. In that case, unserialized `response` objects are returned. Set this flag if the TRS implementation you are working with is not fully compliant with the TRS API specification. |
 
 Example:
 
@@ -174,15 +182,6 @@ methods for additional endpoints implemented in
 | [`.delete_version()`][docs-api-delete_version] | `DELETE ​/tools​/{id}​/versions​/{version_id}` | Delete a tool version |
 | [`.post_service_info()`][docs-api-post_service_info] | `POST ​/service-info` | Register service info |
 
-#### Convenience methods
-
-Finally, TRS-cli tries to provide convenience methods for common operations
-that involve multiple API calls.  Currently there is one such method defined:
-
-| Method | Description |
-| --- | --- |
-| [`.retrieve_files()`][docs-api-retrieve_files] | Retrieve all files associated with a given tool version and descriptor type. Useful for downloading workflows. |
-
 ### Authorization
 
 Authorization [bearer tokens][res-bearer-token] can be provided either during
@@ -309,8 +308,10 @@ question etc.
 [res-elixir-cloud-coc]: <https://github.com/elixir-cloud-aai/elixir-cloud-aai/blob/dev/CODE_OF_CONDUCT.md>
 [res-elixir-cloud-contributing]: <https://github.com/elixir-cloud-aai/elixir-cloud-aai/blob/dev/CONTRIBUTING.md>
 [res-elixir-cloud-trs-filer]: <https://github.com/elixir-cloud-aai/trs-filer>
+[res-eosc-workflow-hub]: <https://workflowhub.eu/>
 [res-ga4gh]: <https://www.ga4gh.org/>
 [res-ga4gh-trs]: <https://github.com/ga4gh/tool-registry-service-schemas>
+[res-ga4gh-trs-version]: <https://github.com/ga4gh/tool-registry-service-schemas/blob/91a57cd93caf380019d4952c0c74bb7e343e647b/openapi/openapi.yaml>
 [res-ga4gh-trs-uri]: <https://ga4gh.github.io/tool-registry-service-schemas/DataModel/#trs_uris>
 [res-pydantic]: <https://pydantic-docs.helpmanual.io/>
 [res-pydantic-docs-export]: <https://pydantic-docs.helpmanual.io/usage/exporting_models/>
