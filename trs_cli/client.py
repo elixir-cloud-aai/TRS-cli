@@ -85,7 +85,7 @@ class TRSClient():
     )
     _RE_TRS_URI_OR_TOOL_ID = (
         rf"^(trs:\/\/{_RE_DOMAIN}\/)?(?P<tool_id>{_RE_TRS_ID})"
-        rf"(\/versions\/(?P<version_id>{_RE_TRS_ID}))?$"
+        rf"(\/(?P<version_id>{_RE_TRS_ID}))?$"
     )
 
     # class configuration variables
