@@ -5,6 +5,7 @@ import json
 import logging
 from pathlib import Path
 import re
+import shutil
 import socket
 import sys
 from typing import (Dict, List, Optional, Tuple, Type, Union)
@@ -213,7 +214,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=Service,
+            json_validation_class=Service,
         )
         logger.info(
             "Retrieved service info"
@@ -269,7 +270,7 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Registered tool class"
@@ -330,7 +331,7 @@ class TRSClient():
             url=url,
             method='put',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             f"Registered tool class with id : {id}"
@@ -380,7 +381,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Deleted tool class"
@@ -436,7 +437,7 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Registered tool"
@@ -497,7 +498,7 @@ class TRSClient():
             url=url,
             method='put',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             f"Registered tool with id: {id}"
@@ -551,7 +552,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Deleted tool"
@@ -613,7 +614,7 @@ class TRSClient():
             url=url,
             method='post',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Registered tool version"
@@ -682,7 +683,7 @@ class TRSClient():
             url=url,
             method='put',
             payload=payload,
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             f"Registered tool version with id {version_id} for tool {id}"
@@ -748,7 +749,7 @@ class TRSClient():
         response = self._send_request_and_validate_response(
             url=url,
             method='delete',
-            validation_class_ok=str,
+            json_validation_class=str,
         )
         logger.info(
             "Deleted tool version"
@@ -796,7 +797,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=(ToolClass, ),
+            json_validation_class=(ToolClass, ),
         )
         logger.info(
             "Retrieved tool classes"
@@ -896,7 +897,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=(Tool, ),
+            json_validation_class=(Tool, ),
         )
         logger.info(
             "Retrieved tools"
@@ -908,7 +909,7 @@ class TRSClient():
         id: str,
         accept: str = 'application/json',
         token: Optional[str] = None,
-    ) -> Union[Tool, Error]:
+    ) -> Union[Error, str, Tool]:
         """Retrieve tool with the specified identifier.
 
         Arguments:
@@ -921,9 +922,9 @@ class TRSClient():
                 if expired.
 
         Returns:
-            Unmarshalled TRS response as either an instance of `Tool`
-            in case of a `200` response, or an instance of `Error` for all
-            other JSON reponses.
+            Unmarshalled TRS response as either an instance of `Tool` in case
+            of a `200` or `201` response, an instance of `Error` for all other
+            JSON reponses, and a string for 'text/plain' responses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -951,7 +952,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=Tool,
+            json_validation_class=Tool,
         )
         logger.info(
             "Retrieved tool"
@@ -1006,7 +1007,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=(ToolVersion, ),
+            json_validation_class=(ToolVersion, ),
         )
         logger.info(
             "Retrieved tool versions"
@@ -1071,7 +1072,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=ToolVersion,
+            json_validation_class=ToolVersion,
         )
         logger.info(
             "Retrieved tool version"
@@ -1140,7 +1141,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=(FileWrapper, ),
+            json_validation_class=(FileWrapper, ),
         )
         logger.info(
             "Retrieved containerfiles"
@@ -1154,7 +1155,7 @@ class TRSClient():
         version_id: Optional[str] = None,
         accept: str = 'application/json',
         token: Optional[str] = None
-    ) -> Union[FileWrapper, Error]:
+    ) -> Union[Error, FileWrapper, str]:
         """Retrieve the file wrapper for the primary descriptor of a specified
         tool version and descriptor type.
 
@@ -1180,8 +1181,9 @@ class TRSClient():
 
         Returns:
             Unmarshalled TRS response as either an instance of `FileWrapper` in
-            case of a `200` response, or an instance of `Error` for all other
-            JSON reponses.
+            case of a `200` or `201` response, an instance of `Error` for all
+            other JSON reponses, or a string with file contents for
+            `text/plain` responses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -1215,7 +1217,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=FileWrapper,
+            json_validation_class=FileWrapper,
         )
         logger.info(
             "Retrieved descriptor"
@@ -1229,9 +1231,9 @@ class TRSClient():
         id: str,
         version_id: Optional[str] = None,
         encode_path: bool = False,
-        accept: str = 'application/json',
+        accept: Optional[str] = None,
         token: Optional[str] = None
-    ) -> Union[FileWrapper, Error]:
+    ) -> Union[Error, FileWrapper, str]:
         """Retrieve the file wrapper for an indicated file for the specified
         tool version and descriptor type.
 
@@ -1240,7 +1242,9 @@ class TRSClient():
                 the bare descriptor while the "non-plain" types return a
                 descriptor wrapped with metadata. Allowed values include "CWL",
                 "WDL", "NFL", "GALAXY", "SMK", "PLAIN_CWL", "PLAIN_WDL",
-                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK".
+                "PLAIN_NFL", "PLAIN_GALAXY", "PLAIN_SMK". Setting one of the
+                "PLAIN_" types will set the default accepted content type to
+                "text/plain" (usually "application/json").
             path: Path, including filename, of descriptor or associated file
                 relative to the primary descriptor file.
             id: A unique identifier of the tool, scoped to this registry OR
@@ -1261,8 +1265,9 @@ class TRSClient():
 
         Returns:
             Unmarshalled TRS response as either an instance of `FileWrapper` in
-            case of a `200` response, or an instance of `Error` for all other
-            JSON reponses.
+            case of a `200` or `201` response, an instance of `Error` for all
+            other JSON reponses, and a string with file contents for
+            'text/plain' responses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -1271,6 +1276,11 @@ class TRSClient():
                 validated against the API schema.
         """
         # validate requested content type and get request headers
+        if accept is None:
+            if type.startswith("PLAIN_"):
+                accept = 'text/plain'
+            else:
+                accept = 'application/json'
         self._validate_content_type(
             requested_type=accept,
             available_types=['application/json', 'text/plain'],
@@ -1297,7 +1307,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=FileWrapper,
+            json_validation_class=FileWrapper,
         )
         logger.info(
             "Retrieved descriptor"
@@ -1310,10 +1320,15 @@ class TRSClient():
         id: str,
         version_id: Optional[str] = None,
         format: Optional[str] = None,
-        token: Optional[str] = None
-    ) -> Union[List[ToolFile], Error]:
-        """Retrieve file information for the specified tool version and
-        descriptor type.
+        outfile: Optional[Path] = None,
+        token: Optional[str] = None,
+    ) -> Union[
+                List[ToolFile],
+                Error,
+                Path,
+                requests.models.Response,
+            ]:
+        """Retrieve file information or ZIP archive of all files.
 
         Arguments:
             type: The output type of the descriptor. Plain types return
@@ -1330,20 +1345,26 @@ class TRSClient():
                 retreived from the TRS URI is overridden.
             format: Returns a zip file of all files when format=zip is
                 specified.
+            outfile: Name of zip archive when `format` is set to 'zip'. Ignored
+                otherwise. If not specified, the filename is set based on the
+                URL by taking the part after the last '/' and stored in the
+                current working directory.
             token: Bearer token for authentication. Set if required by TRS
                 implementation and if not provided when instatiating client or
                 if expired.
 
         Returns:
             Unmarshalled TRS response as either a list of instances of
-            `ToolFile` in case of a `200` response, or an instance of `Error`
-            for all other JSON reponses.
+            `ToolFile` in case of a `200` response, an instance of `Error`
+            for all other JSON reponses, and the absolute path of the ZIP
+            archive if `format` is set to 'zip'.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
                 TRS instance could not be established.
             trs_cli.errors.InvalidResponseError: The response could not be
                 validated against the API schema.
+            IOError: The ZIP archive could not be written.
         """
         # validate requested content type and get request headers
         if format is None:
@@ -1375,15 +1396,76 @@ class TRSClient():
         )
         logger.info(f"Connecting to '{url}'...")
 
-        # send request
-        response = self._send_request_and_validate_response(
-            url=url,
-            validation_class_ok=(ToolFile, ),
-        )
-        logger.info(
-            "Retrieved files"
-        )
-        return response  # type: ignore
+        # send/validate request for 'application/zip'
+        if format == "zip":
+
+            # set output filename
+            if outfile is None:
+                outfile = Path.cwd() / url.split('/')[-1]
+                outfile = Path(re.sub(r'\?format=zip$', '', str(outfile)))
+                if not str(outfile).endswith('.zip'):
+                    outfile = outfile.with_suffix(outfile.suffix + '.zip')
+
+            # send request
+            try:
+                with requests.get(
+                    url=url,
+                    headers=self.headers,
+                    stream=True,
+                ) as response:
+                    logger.info(
+                        f"Status code response: {response.status_code}"
+                    )
+
+                    # check content type
+                    try:
+                        content_type = response.headers['Content-Type']
+                    except (AttributeError, KeyError):
+                        logger.warning(
+                            "No content type set for response; assuming "
+                            "'application/zip'"
+                        )
+                        content_type = 'application/zip'
+                    logger.info(f"Content type of response: {content_type}")
+                    if not content_type.startswith('application/zip'):
+                        logger.warning(
+                            f"The content type of the response "
+                            "('{content_type}') does not match the requested "
+                            f"content type '{self.headers['Accept']}'; "
+                            "returning the unmarshalled/unserialized response "
+                            "object"
+                        )
+                        return response
+
+                    # copy output
+                    try:
+                        with open(outfile, 'wb') as f:
+                            shutil.copyfileobj(response.raw, f)
+                    except IOError:
+                        logger.warning(
+                            "Could not write output file; returning the "
+                            "unmarshalled/unserialized response object"
+                        )
+                        return response
+            except (
+                requests.exceptions.ConnectionError,
+                socket.gaierror,
+                urllib3.exceptions.NewConnectionError,
+            ) as exc:
+                raise requests.exceptions.ConnectionError(
+                    "Could not connect to API endpoint"
+                ) from exc
+            logger.info("Retrieved ZIP archive")
+            return outfile
+
+        # send/validate request for 'applicaton/json'
+        else:
+            response = self._send_request_and_validate_response(
+                url=url,
+                json_validation_class=(ToolFile, ),
+            )
+            logger.info("Retrieved file info")
+            return response  # type: ignore
 
     def get_tests(
         self,
@@ -1392,7 +1474,7 @@ class TRSClient():
         version_id: Optional[str] = None,
         accept: str = 'application/json',
         token: Optional[str] = None
-    ) -> Union[List[FileWrapper], Error]:
+    ) -> Union[Error, List[FileWrapper], str]:
         """Retrieve the file wrappers for all tests associated with a
         specified tool version and descriptor type.
 
@@ -1418,8 +1500,9 @@ class TRSClient():
 
         Returns:
             Unmarshalled TRS response as either a list of `FileWrapper`
-            instances in case of a `200` response, or an instance of `Error`
-            for all other JSON reponses.
+            instances in case of a `200` or `201` response, an instance of
+            `Error` for all other JSON reponses, and a string for 'text/plain'
+            responses.
 
         Raises:
             requests.exceptions.ConnectionError: A connection to the provided
@@ -1453,7 +1536,7 @@ class TRSClient():
         # send request
         response = self._send_request_and_validate_response(
             url=url,
-            validation_class_ok=(FileWrapper, ),
+            json_validation_class=(FileWrapper, ),
         )
         logger.info(
             "Retrieved tests"
@@ -1471,6 +1554,8 @@ class TRSClient():
     ) -> Dict[str, List[str]]:
         """Write tool version file contents for a given descriptor type to
         files.
+
+        DEPRECATED: Use `.get_files` with `format=zip` instead.
 
         Arguments:
             out_dir: Directory to write requested files to. Will be attempted
@@ -1545,7 +1630,7 @@ class TRSClient():
         for path, content in file_wrappers.items():
             out_path = out_dir / path
             try:
-                with open(out_path, "w") as _fp:
+                with open(out_path, 'w') as _fp:
                     _fp.write(content)
             except OSError:
                 raise OSError(f"Could not write file '{str(out_path)}'")
@@ -1699,16 +1784,17 @@ class TRSClient():
     def _send_request_and_validate_response(
         self,
         url: str,
-        validation_class_ok: Optional[
+        json_validation_class: Optional[
             Union[ModelMetaclass, Tuple[ModelMetaclass], Type[str]]
         ] = None,
-        validation_class_error: ModelMetaclass = Error,
         method: str = 'get',
         payload: Optional[Dict] = None,
+        success_codes: Optional[List] = None,
     ) -> Optional[Union[
                 str,
                 requests.models.Response,
-                ModelMetaclass, List[ModelMetaclass],
+                ModelMetaclass,
+                List[ModelMetaclass],
             ]]:
         """Send a HTTP equest, validate the response and handle potential
         exceptions.
@@ -1727,11 +1813,13 @@ class TRSClient():
             Unmarshalled response (default) or unserialized response if
             class configuration flag `TRSClient.no_validate` is set.
         """
-        # Validate HTTP method
+        # Validate input parameters
         try:
             request_func = eval('.'.join(['requests', method]))
         except AttributeError as e:
-            raise AttributeError("Illegal HTTP method provided.") from e
+            raise AttributeError("Illegal HTTP method provided") from e
+        if success_codes is None:
+            success_codes = [200, 201]
 
         # Compile request arguments
         kwargs = {
@@ -1752,49 +1840,58 @@ class TRSClient():
             raise requests.exceptions.ConnectionError(
                 "Could not connect to API endpoint"
             )
+        logger.info(
+            f"Status code response: {response.status_code}"
+        )
+
+        # get content type
+        try:
+            content_type = response.headers['Content-Type']
+        except (AttributeError, KeyError):
+            logger.warning(
+                "No content type set for response; assuming 'application/json'"
+            )
+            content_type = 'application/json'
+        logger.info(f"Content type of response: {content_type}")
+        if not content_type.startswith(self.headers['Accept']):
+            logger.warning(
+                f"The content type of the response ('{content_type}') does "
+                "not match the requested content type "
+                f"'{self.headers['Accept']}'; returning the "
+                "unmarshalled/unserialized response object"
+            )
+            return response
 
         # skip validation
         if TRSClient.no_validate:
             return response
 
-        # set validation parameters
-        validation_type = "model"
-        if isinstance(validation_class_ok, tuple):
-            validation_class_ok = validation_class_ok[0]
-            validation_type = "list"
-        elif validation_class_ok is None:
-            validation_type = None
-        elif validation_class_ok is str:
-            validation_type = "str"
-        if response.status_code not in [200, 201]:
-            logger.warning(
-                f"Received error response: {response.status_code}"
-            )
-            try:
-                return validation_class_error(**response.json())
-            except (
-                json.decoder.JSONDecodeError,
-                pydantic.ValidationError,
-            ) as exc:
-                raise InvalidResponseError(
-                    "Response could not be validated against API schema"
-                ) from exc
-        else:
-            try:
-                if validation_type == "list":
-                    return [
-                        validation_class_ok(**obj) for obj in response.json()
-                    ]  # type: ignore
-                elif validation_type == "str":
-                    return str(response.json())
-                elif validation_type is None:
-                    return None
-                else:
-                    return validation_class_ok(**response.json())
-            except (
-                json.decoder.JSONDecodeError,
-                pydantic.ValidationError,
-            ) as exc:
-                raise InvalidResponseError(
-                    "Response could not be validated against API schema"
-                ) from exc
+        # process 'text/plain' responses
+        if content_type.startswith("text/plain"):
+            logger.info("Returning string response")
+            return response.text
+
+        # validate JSON
+        try:
+            if response.status_code not in success_codes:
+                logger.warning(
+                    f"Received error response: {response.status_code}"
+                )
+                return Error(**response.json())
+            if isinstance(json_validation_class, tuple):
+                return [
+                    json_validation_class[0](**obj) for obj in response.json()
+                ]  # type: ignore
+            elif json_validation_class is None:
+                return None
+            elif json_validation_class is str:
+                return str(response.json())
+            else:
+                return json_validation_class(**response.json())
+        except (
+            json.decoder.JSONDecodeError,
+            pydantic.ValidationError,
+        ) as exc:
+            raise InvalidResponseError(
+                "Response could not be validated against API schema"
+            ) from exc
